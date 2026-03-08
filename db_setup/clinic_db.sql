@@ -1,3 +1,6 @@
+CREATE DATABASE IF NOT EXISTS healthbridge_db;
+USE healthbridge_db;
+
 -- TABLE 1: users
 CREATE TABLE `users` (
   `user_id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -19,7 +22,7 @@ CREATE TABLE `patients` (
   `email` VARCHAR(100),
   `address` TEXT,
   `blood_type` VARCHAR(5),
-  `registered_at` DATETIME,
+  `registered_at` DATETIME DEFAULT NOW(),
   `emergency_contact` VARCHAR(100),
   `insurance_provider` VARCHAR(100),
   `national_id` VARCHAR(50),
@@ -53,7 +56,7 @@ CREATE TABLE `appointments` (
   `appointment_datetime` DATETIME NOT NULL,
   `reason` TEXT,
   `status` ENUM('Scheduled','Completed','Cancelled','No-show'),
-  `created_at` DATETIME,
+  `created_at` DATETIME DEFAULT NOW(),
   FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`),
   FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`)
 );
@@ -157,6 +160,6 @@ CREATE TABLE `reports` (
   `date_from` DATE,
   `date_to` DATE,
   `generated_by` VARCHAR(100),
-  `generated_at` DATETIME,
+  `generated_at` DATETIME DEFAULT NOW(),
   `summary_data` JSON
 );
