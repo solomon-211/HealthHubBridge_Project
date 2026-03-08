@@ -2,7 +2,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* ── CSS VARIABLES ── */
-/* Match Ahmad's database ENUM values with colors */
 :root {
   /* Brand Colors */
   --primary:        #2563EB;
@@ -373,7 +372,6 @@ tr:last-child td { border-bottom: none; }
 tr:hover td { background: #F8FAFC; }
 
 /* ── STATUS BADGES ── */
-/* Matches Ahmad's ENUM values exactly */
 .badge {
   display: inline-flex;
   align-items: center;
