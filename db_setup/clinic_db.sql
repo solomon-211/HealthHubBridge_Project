@@ -80,3 +80,49 @@ CREATE TABLE `prescriptions` (
   FOREIGN KEY (`visit_id`) REFERENCES `medical_visits`(`visit_id`)
 );
 
+-- TABLE 8: services
+CREATE TABLE `services` (
+  `service_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `service_name` VARCHAR(100) NOT NULL,
+  `description` TEXT,
+  `unit_price` DECIMAL(10,2) NOT NULL,
+  `category` VARCHAR(50)
+);
+
+-- TABLE 9: invoices
+CREATE TABLE `invoices` (
+  `invoice_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `patient_id` INT NOT NULL,
+  `appointment_id` INT,
+  `invoice_date` DATE NOT NULL,
+  `total_amount` DECIMAL(10,2),
+  `discount` DECIMAL(10,2),
+  `amount_due` DECIMAL(10,2),
+  `payment_status` ENUM('Unpaid','Partial','Paid'),
+  FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`),
+  FOREIGN KEY (`appointment_id`) REFERENCES `appointments`(`appointment_id`)
+);
+
+-- TABLE 10: invoice_items
+CREATE TABLE `invoice_items` (
+  `item_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `invoice_id` INT NOT NULL,
+  `service_id` INT NOT NULL,
+  `quantity` INT NOT NULL,
+  `unit_price` DECIMAL(10,2),
+  `subtotal` DECIMAL(10,2),
+  FOREIGN KEY (`invoice_id`) REFERENCES `invoices`(`invoice_id`),
+  FOREIGN KEY (`service_id`) REFERENCES `services`(`service_id`)
+);
+
+-- TABLE 11: payments
+CREATE TABLE `payments` (
+  `payment_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `invoice_id` INT NOT NULL,
+  `payment_date` DATE NOT NULL,
+  `amount_paid` DECIMAL(10,2) NOT NULL,
+  `payment_method` ENUM('Cash','Card','Mobile','Insurance'),
+  `reference_no` VARCHAR(100),
+  `received_by` VARCHAR(100),
+  FOREIGN KEY (`invoice_id`) REFERENCES `invoices`(`invoice_id`)
+);
