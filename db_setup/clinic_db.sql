@@ -47,3 +47,36 @@ CREATE TABLE `appointments` (
   FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`),
   FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`)
 );
+
+-- TABLE 5: medical_visits
+CREATE TABLE `medical_visits` (
+  `visit_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `patient_id` INT NOT NULL,
+  `doctor_id` INT NOT NULL,
+  `appointment_id` INT,
+  `visit_date` DATE NOT NULL,
+  `notes` TEXT,
+  FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`),
+  FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`),
+  FOREIGN KEY (`appointment_id`) REFERENCES `appointments`(`appointment_id`)
+);
+
+-- TABLE 6: diagnoses
+CREATE TABLE `diagnoses` (
+  `diagnosis_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `visit_id` INT NOT NULL,
+  `description` TEXT,
+  FOREIGN KEY (`visit_id`) REFERENCES `medical_visits`(`visit_id`)
+);
+
+-- TABLE 7: prescriptions
+CREATE TABLE `prescriptions` (
+  `prescription_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `visit_id` INT NOT NULL,
+  `drug_name` VARCHAR(150) NOT NULL,
+  `dosage` VARCHAR(100),
+  `duration` VARCHAR(50),
+  `end_time` DATETIME,
+  FOREIGN KEY (`visit_id`) REFERENCES `medical_visits`(`visit_id`)
+);
+
