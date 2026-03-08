@@ -25,3 +25,25 @@ CREATE TABLE `doctors` (
   `email` VARCHAR(100),
   `is_active` TINYINT(1)
 );
+
+-- TABLE 3: doctor_schedule
+CREATE TABLE `doctor_schedule` (
+  `schedule_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `doctor_id` INT NOT NULL,
+  `day_of_week` ENUM('Mon','Tue','Wed','Thu','Fri','Sat','Sun'),
+  `start_time` TIME NOT NULL,
+  FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`)
+);
+
+-- TABLE 4: appointments
+CREATE TABLE `appointments` (
+  `appointment_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `patient_id` INT NOT NULL,
+  `doctor_id` INT NOT NULL,
+  `appointment_datetime` DATETIME NOT NULL,
+  `reason` TEXT,
+  `status` ENUM('Scheduled','Completed','Cancelled','No-show'),
+  `created_at` DATETIME,
+  FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`),
+  FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`)
+);
