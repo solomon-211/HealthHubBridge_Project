@@ -1,4 +1,14 @@
--- TABLE 1: patients
+-- TABLE 1: users
+CREATE TABLE `users` (
+  `user_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `username` VARCHAR(50) NOT NULL UNIQUE,
+  `password` VARCHAR(64) NOT NULL,
+  `role` ENUM('admin','doctor','receptionist') NOT NULL,
+  `fullname` VARCHAR(100),
+  `created_at` DATETIME DEFAULT NOW()
+);
+
+-- TABLE 2: patients
 CREATE TABLE `patients` (
   `patient_id` INT AUTO_INCREMENT PRIMARY KEY,
   `first_name` VARCHAR(50) NOT NULL,
@@ -16,7 +26,7 @@ CREATE TABLE `patients` (
   `clinic_number` VARCHAR(50) UNIQUE
 );
 
--- TABLE 2: doctors
+-- TABLE 3: doctors
 CREATE TABLE `doctors` (
   `doctor_id` INT AUTO_INCREMENT PRIMARY KEY,
   `full_name` VARCHAR(100) NOT NULL,
@@ -26,7 +36,7 @@ CREATE TABLE `doctors` (
   `is_active` TINYINT(1)
 );
 
--- TABLE 3: doctor_schedule
+-- TABLE 4: doctor_schedule
 CREATE TABLE `doctor_schedule` (
   `schedule_id` INT AUTO_INCREMENT PRIMARY KEY,
   `doctor_id` INT NOT NULL,
@@ -35,7 +45,7 @@ CREATE TABLE `doctor_schedule` (
   FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`)
 );
 
--- TABLE 4: appointments
+-- TABLE 5: appointments
 CREATE TABLE `appointments` (
   `appointment_id` INT AUTO_INCREMENT PRIMARY KEY,
   `patient_id` INT NOT NULL,
@@ -48,7 +58,7 @@ CREATE TABLE `appointments` (
   FOREIGN KEY (`doctor_id`) REFERENCES `doctors`(`doctor_id`)
 );
 
--- TABLE 5: medical_visits
+-- TABLE 6: medical_visits
 CREATE TABLE `medical_visits` (
   `visit_id` INT AUTO_INCREMENT PRIMARY KEY,
   `patient_id` INT NOT NULL,
@@ -61,7 +71,7 @@ CREATE TABLE `medical_visits` (
   FOREIGN KEY (`appointment_id`) REFERENCES `appointments`(`appointment_id`)
 );
 
--- TABLE 6: diagnoses
+-- TABLE 7: diagnoses
 CREATE TABLE `diagnoses` (
   `diagnosis_id` INT AUTO_INCREMENT PRIMARY KEY,
   `visit_id` INT NOT NULL,
@@ -69,7 +79,7 @@ CREATE TABLE `diagnoses` (
   FOREIGN KEY (`visit_id`) REFERENCES `medical_visits`(`visit_id`)
 );
 
--- TABLE 7: prescriptions
+-- TABLE 8: prescriptions
 CREATE TABLE `prescriptions` (
   `prescription_id` INT AUTO_INCREMENT PRIMARY KEY,
   `visit_id` INT NOT NULL,
@@ -80,7 +90,7 @@ CREATE TABLE `prescriptions` (
   FOREIGN KEY (`visit_id`) REFERENCES `medical_visits`(`visit_id`)
 );
 
--- TABLE 8: services
+-- TABLE 9: services
 CREATE TABLE `services` (
   `service_id` INT AUTO_INCREMENT PRIMARY KEY,
   `service_name` VARCHAR(100) NOT NULL,
@@ -89,7 +99,7 @@ CREATE TABLE `services` (
   `category` VARCHAR(50)
 );
 
--- TABLE 9: invoices
+-- TABLE 10: invoices
 CREATE TABLE `invoices` (
   `invoice_id` INT AUTO_INCREMENT PRIMARY KEY,
   `patient_id` INT NOT NULL,
@@ -103,7 +113,7 @@ CREATE TABLE `invoices` (
   FOREIGN KEY (`appointment_id`) REFERENCES `appointments`(`appointment_id`)
 );
 
--- TABLE 10: invoice_items
+-- TABLE 11: invoice_items
 CREATE TABLE `invoice_items` (
   `item_id` INT AUTO_INCREMENT PRIMARY KEY,
   `invoice_id` INT NOT NULL,
@@ -115,7 +125,7 @@ CREATE TABLE `invoice_items` (
   FOREIGN KEY (`service_id`) REFERENCES `services`(`service_id`)
 );
 
--- TABLE 11: payments
+-- TABLE 12: payments
 CREATE TABLE `payments` (
   `payment_id` INT AUTO_INCREMENT PRIMARY KEY,
   `invoice_id` INT NOT NULL,
@@ -127,7 +137,7 @@ CREATE TABLE `payments` (
   FOREIGN KEY (`invoice_id`) REFERENCES `invoices`(`invoice_id`)
 );
 
--- TABLE 12: analytics_snapshots
+-- TABLE 13: analytics_snapshots
 CREATE TABLE `analytics_snapshots` (
   `snapshot_id` INT AUTO_INCREMENT PRIMARY KEY,
   `snapshot_date` DATE NOT NULL,
@@ -139,7 +149,7 @@ CREATE TABLE `analytics_snapshots` (
   `avg_wait_time_min` INT
 );
 
--- TABLE 13: reports
+-- TABLE 14: reports
 CREATE TABLE `reports` (
   `report_id` INT AUTO_INCREMENT PRIMARY KEY,
   `report_name` VARCHAR(150) NOT NULL,
