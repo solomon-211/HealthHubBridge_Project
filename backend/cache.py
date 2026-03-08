@@ -1,16 +1,4 @@
-"""
-Simple in-memory cache for GET endpoints.
-
-Why this matters for low connectivity:
-  On a slow or intermittent network, repeated identical requests (e.g. the
-  dashboard reloading every 30 s) would all hammer the database. This cache
-  stores the last response for each URL for a short TTL so the server can
-  reply instantly without a DB round-trip, reducing latency noticeably on
-  poor connections.
-
-This is intentionally simple — a dict + timestamps. No external dependencies
-(no Redis, no Memcached). Suitable for a single-server clinic deployment.
-"""
+#Simple in-memory cache for GET endpoints.
 
 import time
 
