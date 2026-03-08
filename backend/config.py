@@ -15,3 +15,16 @@ class Config:
     CACHE_TTL = int(os.environ.get('CACHE_TTL', 30))
 
 
+def get_db_connection():
+    # create and return a new DB connection.
+    import mysql.connector
+    conn = mysql.connector.connect(
+        host        = Config.DB_HOST,
+        port        = Config.DB_PORT,
+        user        = Config.DB_USER,
+        password    = Config.DB_PASSWORD,
+        database    = Config.DB_NAME,
+        connect_timeout = 10       # fail fast on bad network instead of hanging
+    )
+    return conn
+
