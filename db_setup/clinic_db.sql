@@ -108,9 +108,9 @@ CREATE TABLE `invoices` (
   `patient_id` INT NOT NULL,
   `appointment_id` INT,
   `invoice_date` DATE NOT NULL,
-  `total_amount` DECIMAL(10,2),
-  `discount` DECIMAL(10,2),
-  `amount_due` DECIMAL(10,2),
+  `total_amount` DECIMAL(10,2) DEFAULT 0.00,
+  `discount` DECIMAL(10,2) DEFAULT 0.00,
+  `amount_due` DECIMAL(10,2) DEFAULT 0.00,
   `payment_status` ENUM('Unpaid','Partial','Paid'),
   FOREIGN KEY (`patient_id`) REFERENCES `patients`(`patient_id`),
   FOREIGN KEY (`appointment_id`) REFERENCES `appointments`(`appointment_id`)
