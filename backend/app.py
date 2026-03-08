@@ -27,9 +27,8 @@ app.register_blueprint(billing_bp,       url_prefix='/api')
 app.register_blueprint(reports_bp,       url_prefix='/api')
 
 
-# ── Global error handlers ──────────────────────────────────────────────────────
-# These catch unhandled errors so the API always returns clean JSON,
-# not an HTML error page (important for the JS frontend to parse).
+# Global error handlers
+# These catch unhandled errors so the API always returns clean JSON, even if something unexpected happens.
 
 @app.errorhandler(404)
 def not_found(e):
