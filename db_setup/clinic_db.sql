@@ -127,3 +127,26 @@ CREATE TABLE `payments` (
   FOREIGN KEY (`invoice_id`) REFERENCES `invoices`(`invoice_id`)
 );
 
+-- TABLE 12: analytics_snapshots
+CREATE TABLE `analytics_snapshots` (
+  `snapshot_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `snapshot_date` DATE NOT NULL,
+  `total_patients` INT,
+  `total_appointments` INT,
+  `total_revenue` DECIMAL(12,2),
+  `top_diagnosis` VARCHAR(200),
+  `cancellation_rate` DECIMAL(5,2),
+  `avg_wait_time_min` INT
+);
+
+-- TABLE 13: reports
+CREATE TABLE `reports` (
+  `report_id` INT AUTO_INCREMENT PRIMARY KEY,
+  `report_name` VARCHAR(150) NOT NULL,
+  `report_type` ENUM('Financial','Clinical','Operational'),
+  `date_from` DATE,
+  `date_to` DATE,
+  `generated_by` VARCHAR(100),
+  `generated_at` DATETIME,
+  `summary_data` JSON
+);
