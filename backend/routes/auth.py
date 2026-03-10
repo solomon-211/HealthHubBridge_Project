@@ -54,3 +54,21 @@ def login():
 def logout():
     session.clear()
     return jsonify({'message': 'Logged out successfully'}), 200
+
+
+# a decorator function that can be applied to routes to ensure that only logged-in users can access them. It checks if the user is logged in and if their session has expired, returning appropriate error 401 messages if access is denied.
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Please log in to access this resource'}), 401
+
+        # Auto-expire session after SESSION_LIFETIME seconds
+        elapsed = time.time() - session.get('logged_in_at', 0)
+        if elapsed > Config.SESSION_LIFETIME:
+            session.clear()
+            return jsonify({'error': 'Session expired. Please log in again.'}), 401
+
+        return f(*args, **kwargs)
+    return decorated
