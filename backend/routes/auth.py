@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, session
 from config import get_db_connection, Config
 import hashlib
+import time 
 
 
 # initializes the Flask Blueprint for the authentication route.
@@ -46,3 +47,10 @@ def login():
         'message':  'Login successful',
         'user':     {'username': user['username'], 'role': user['role']}
     }), 200
+
+
+# handles POST requests to the /api/auth/logout endpoint, allowing users to log out by clearing their session data.
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logged out successfully'}), 200
