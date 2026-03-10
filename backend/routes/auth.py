@@ -72,3 +72,17 @@ def login_required(f):
 
         return f(*args, **kwargs)
     return decorated
+
+# a decorator function that can be applied to routes to restrict access based on user roles (e.g., 'admin', 'doctor'). It checks if the user is logged in and if their role is in the allowed roles, returning appropriate error messages if access is denied.
+def role_required(*allowed_roles):
+    from functools import wraps
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if 'user_id' not in session:
+                return jsonify({'error': 'Please log in'}), 401
+            if session.get('role') not in allowed_roles:
+                return jsonify({'error': 'You do not have permission to access this resource'}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
