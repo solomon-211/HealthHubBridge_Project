@@ -17,7 +17,12 @@ def get_doctors():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute()
+        cursor.execute("""
+            SELECT doctor_id, full_name, specialization, phone, email
+            FROM doctors
+            WHERE is_active = 1
+            ORDER BY full_name
+        """)
         doctors = cursor.fetchall()
         conn.close()
     except Exception as e:
@@ -38,7 +43,14 @@ def get_all_schedules():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute()
+        cursor.execute("""
+            SELECT ds.schedule_id, ds.day_of_week, ds.start_time,
+                   d.doctor_id, d.full_name, d.specialization
+            FROM doctor_schedule ds
+            JOIN doctors d ON ds.doctor_id = d.doctor_id
+            WHERE d.is_active = 1
+            ORDER BY d.full_name, ds.day_of_week
+        """)
         schedules = cursor.fetchall()
         conn.close()
     except Exception as e:
