@@ -55,15 +55,12 @@
 
 <script src="../assets/js/utils.js"></script>
 <script>
-  // Redirect to dashboard if already logged in
-  if (sessionStorage.getItem('token')) {
-    window.location.href = '../dashboard/index.html';
+  // Redirect already-authenticated users straight to the dashboard.
+  if (sessionStorage.getItem('role')) {
+    window.location.href = '/dashboard/index.html';
   }
 
-  /**
-   * Toggle password visibility
-   * Changes input type between password and text
-   */
+  // Password visibility toggle in the login form.
   function togglePassword() {
     const pwd = document.getElementById('password');
     const btn = document.getElementById('toggle-pwd');
@@ -77,21 +74,18 @@
     }
   }
 
-  /**
-   * Handle login form submission
-   * Validates inputs, calls backend API, and stores session data
-   */
+  // Main login workflow: validate -> authenticate -> persist session -> redirect.
   async function handleLogin() {
-    // Get form values
+    // Read form values
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
 
-    // Clear previous error messages
+    // Reset previous validation and server error states
     document.getElementById('username-error').classList.remove('show');
     document.getElementById('password-error').classList.remove('show');
     document.getElementById('login-error').style.display = 'none';
 
-    // Validate form inputs
+    // Frontend validation
     let isValid = true;
     
     if (!username) {
@@ -108,49 +102,49 @@
     
     if (!isValid) return;
 
-    // Show loading state
+    // Loading state while request is in progress
     const button = document.getElementById('login-btn');
     button.disabled = true;
     button.innerHTML = '<span class="spinner"></span> Logging in...';
 
     try {
-      // Call backend authentication API
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      // Authenticate against backend
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
 
       const data = await response.json();
 
-      // Handle authentication failure
+      // Backend rejected credentials
       if (!response.ok) {
         throw new Error(data.error || 'Invalid credentials');
       }
 
-      // Store user session data
-      sessionStorage.setItem('token', data.token);
-      sessionStorage.setItem('role', data.role);
-      sessionStorage.setItem('name', data.name);
-      sessionStorage.setItem('user_id', data.user_id);
+      // Persist session information for role-based navigation
+      sessionStorage.setItem('role', data.user.role);
+      sessionStorage.setItem('name', data.user.username);
       sessionStorage.setItem('login_time', Date.now());
+      if (data.user.doctor_id) sessionStorage.setItem('doctor_id', data.user.doctor_id);
 
-      // Redirect to dashboard
-      window.location.href = '../dashboard/index.html';
+      // Successful login: move into app
+      window.location.href = '/dashboard/index.html';
       
     } catch (error) {
-      // Display error message
+      // Surface API/network error to user
       const errorBox = document.getElementById('login-error');
       errorBox.textContent = error.message;
       errorBox.style.display = 'block';
       
-      // Reset button state
+      // Restore button state
       button.disabled = false;
       button.textContent = 'Login';
     }
   }
 
-  // Allow Enter key to submit form
+  // Enter key convenience submit
   document.addEventListener('keydown', event => {
     if (event.key === 'Enter') handleLogin();
   });
