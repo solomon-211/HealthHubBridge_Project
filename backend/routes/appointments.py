@@ -59,39 +59,6 @@ def get_appointments():
     return jsonify({'appointments': appointments, 'source': 'db'}), 200
 
 
-# route to get today's appointments for the dashboard
-@appointments_bp.route('/appointments/today', methods=['GET'])
-@login_required
-def get_today_appointments():
-    today = date.today().isoformat()
-    cache_key = f'appointments:today:{today}'
-    cached = cache_get(cache_key)
-    if cached:
-        return jsonify({'appointments': cached, 'date': today, 'source': 'cache'}), 200
-
-    try:
-        conn   = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT a.appointment_id, a.appointment_datetime, a.reason, a.status,
-                   a.patient_id, a.doctor_id,
-                   p.first_name, p.last_name, p.clinic_number,
-                   d.full_name AS doctor_name
-            FROM appointments a
-            JOIN patients p ON a.patient_id = p.patient_id
-            JOIN doctors  d ON a.doctor_id  = d.doctor_id
-            WHERE DATE(a.appointment_datetime) = CURDATE()
-            ORDER BY a.appointment_datetime
-        """)
-        appointments = cursor.fetchall()
-        conn.close()
-    except Exception as e:
-        return jsonify({'error': 'Could not retrieve today\'s appointments.', 'details': str(e)}), 503
-
-    cache_set(cache_key, appointments, ttl=60)  # cache for 60 s — dashboard refreshes often
-    return jsonify({'appointments': appointments, 'date': today, 'source': 'db'}), 200
-
-
 # route to get a summary of appointments for the past week (for admin dashboard)
 @appointments_bp.route('/appointments/week-summary', methods=['GET'])
 @login_required
@@ -125,6 +92,37 @@ def week_summary():
 
     cache_set(cache_key, summary, ttl=120)
     return jsonify({'summary': summary, 'source': 'db'}), 200
+
+@appointments_bp.route('/appointments/upcoming', methods=['GET'])
+@login_required
+def get_upcoming_appointments():
+    cache_key = 'appointments:upcoming'
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify({'appointments': cached, 'source': 'cache'}), 200
+ 
+    try:
+        conn   = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT a.appointment_id, a.appointment_datetime, a.reason, a.status,
+                   a.patient_id, a.doctor_id,
+                   p.first_name, p.last_name, p.clinic_number,
+                   d.full_name AS doctor_name
+            FROM appointments a
+            JOIN patients p ON a.patient_id = p.patient_id
+            JOIN doctors  d ON a.doctor_id  = d.doctor_id
+            WHERE a.status = 'Scheduled'
+              AND a.appointment_datetime >= NOW()
+            ORDER BY a.appointment_datetime
+        """)
+        appointments = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        return jsonify({'error': 'Could not retrieve upcoming appointments.', 'details': str(e)}), 503
+ 
+    cache_set(cache_key, appointments, ttl=60)
+    return jsonify({'appointments': appointments, 'source': 'db'}), 200
 
 
 @appointments_bp.route('/appointments/upcoming', methods=['GET'])
@@ -199,12 +197,14 @@ def book_appointment():
                 'error': f"Doctor is not available on {appt_dt.strftime('%A')}s. "
                           "Please choose a different day."
             }), 409
+        
+
 
         # 2. Check for a double-booking on the same slot (within 30 minutes)
         cursor.execute("""
             SELECT appointment_id FROM appointments
             WHERE doctor_id = %s
-              AND status    = 'Scheduled'
+              AND a.status    = 'Scheduled'
               AND ABS(TIMESTAMPDIFF(MINUTE, appointment_datetime, %s)) < 30
         """, (data['doctor_id'], data['appointment_datetime']))
         if cursor.fetchone():
