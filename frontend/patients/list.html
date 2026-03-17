@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patients - CCMS</title>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="stylesheet" href="/patients/list.css" />
+</head>
+<body>
+
+<!-- Full-page spinner shown during API calls -->
+<div id="global-spinner" class="global-spinner-overlay">
+  <span class="spinner spinner-dark spinner-lg"></span>
+</div>
+
+<div class="layout">
+
+  <!-- Header and sidebar are injected by utils.js -->
+  <div id="header-slot"></div>
+  <div id="sidebar-slot"></div>
+
+  <main class="main">
+
+    <div class="page-header">
+      <div class="page-heading">
+        <h1 class="page-title">Patients</h1>
+        <p class="page-subtitle">View records, search quickly, and manage patient registration</p>
+      </div>
+      <!-- Register button is hidden for doctors via applyRoleVisibility() -->
+      <div class="page-actions">
+        <button class="btn btn-primary" id="register-btn" onclick="location.href = '/patients/register.html'">
+          Register New Patient
+        </button>
+      </div>
+    </div>
+
+    <!-- Search bar — list.js debounces input and calls the API -->
+    <div class="page-controls">
+      <div class="search-box">
+        <span class="search-box-icon"></span>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search by name, clinic number, or phone..."
+        />
+        <button class="search-clear" id="search-clear" onclick="clearSearch()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Patient table — rows are built and injected by renderTable() in list.js -->
+    <div class="table-container">
+      <div class="table-header">
+        <span class="table-info" id="table-info"></span>
+      </div>
+
+      <!-- Placeholder text while the first load is in progress -->
+      <div id="patients-list">
+        <div class="patients-loading">Loading patients...</div>
+      </div>
+
+      <!-- Pagination bar — hidden when everything fits on one page -->
+      <div class="pagination-footer is-hidden" id="pagination-footer">
+        <span class="pagination-info" id="pagination-info"></span>
+        <div class="pagination">
+          <button class="pagination-btn" id="prev-btn" onclick="previousPage()">← Previous</button>
+          <button class="pagination-btn" id="next-btn" onclick="nextPage()">Next →</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/assets/js/utils.js"></script>
+<script src="/patients/list.js"></script>
+</body>
+</html>

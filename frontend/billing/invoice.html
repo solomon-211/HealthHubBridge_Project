@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice — CCMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <link rel="stylesheet" href="invoice.css" />
+</head>
+<body>
+
+<!-- Full-page spinner shown while the invoice loads -->
+<div id="global-spinner" class="global-spinner-overlay">
+  <span class="spinner spinner-dark spinner-lg"></span>
+</div>
+
+<div class="layout">
+  <div id="header-slot"></div>
+  <div id="sidebar-slot"></div>
+
+  <main class="main">
+
+    <!-- Invoice header row — number and patient name filled in by invoice.js -->
+    <div class="page-header">
+      <div>
+        <div class="invoice-title" id="invoice-number">Invoice #</div>
+        <div class="invoice-patient-name" id="invoice-patient">—</div>
+      </div>
+      <div class="invoice-header-actions">
+        <button class="btn btn-outline btn-sm" onclick="history.back()">← Back</button>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
+      </div>
+    </div>
+
+    <!-- Quick-glance meta row: date, status badge, total, and amount due -->
+    <div class="invoice-meta">
+      <div class="meta-item">
+        <div class="meta-label">Date</div>
+        <div class="meta-value" id="invoice-date">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Status</div>
+        <div class="meta-value"><span id="invoice-status">—</span></div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Total Amount</div>
+        <div class="meta-value" id="invoice-total">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Amount Due</div>
+        <!-- Amount due is shown in red to draw attention to outstanding balances -->
+        <div class="meta-value invoice-due" id="invoice-due">—</div>
+      </div>
+    </div>
+
+    <div class="invoice-container">
+
+      <!-- Services section — rows are rendered by renderServices() in invoice.js -->
+      <div class="invoice-section">
+        <div class="section-title">Services</div>
+        <table class="services-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Category</th>
+              <th class="numeric">Qty</th>
+              <th class="numeric">Unit Price</th>
+              <th class="numeric">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="services-tbody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals breakdown: subtotal, discount, and final amount due -->
+      <div class="invoice-section">
+        <div class="totals-section">
+          <div></div>
+          <div class="totals">
+            <div class="total-row">
+              <span class="total-label">Subtotal</span>
+              <span class="total-value" id="subtotal">—</span>
+            </div>
+            <div class="total-row">
+              <span class="total-label">Discount</span>
+              <span class="total-value" id="discount-display">—</span>
+            </div>
+            <div class="total-row grand">
+              <span class="total-label">Amount Due</span>
+              <span class="total-value" id="amount-due">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment history section — the Add Payment button is hidden for fully paid invoices -->
+      <div class="invoice-section">
+        <div class="section-header-row">
+          <div class="section-title section-title-inline">Payment History</div>
+          <button class="btn btn-primary btn-sm invoice-add-payment-btn" id="add-payment-btn" onclick="openPaymentModal()">+ Add Payment</button>
+        </div>
+        <!-- invoice.js replaces this with a placeholder message since the endpoint doesn't return payments -->
+        <div id="payments-list">
+          <p class="payment-empty">Loading...</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Payment modal — amount, method, and optional reference number -->
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Record Payment</h3>
+      <button class="modal-close" onclick="hideModal('payment-modal')">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (SSP) <span class="required">*</span></label>
+      <input type="number" id="pay-amount" class="form-control" min="0" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select id="pay-method" class="form-control" title="Payment method">
+        <option value="Cash">Cash</option>
+        <option value="Card">Card</option>
+        <option value="Mobile">Mobile</option>
+        <option value="Insurance">Insurance</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reference No.</label>
+      <input type="text" id="pay-ref" class="form-control" placeholder="Optional">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="hideModal('payment-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitPayment()">Record Payment</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/utils.js"></script>
+<script src="invoice.js"></script>
+</body>
+</html>

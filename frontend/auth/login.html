@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — CCMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- Clinic branding at the top of the card -->
+    <div class="login-logo">
+      <!-- Blue square logo with HB initials -->
+      <div class="login-logo-icon">
+        <span class="login-logo-initials">HB</span>
+      </div>
+      <h1>HealthHub Bridge</h1>
+      <p>Community Clinic Management System</p>
+    </div>
+
+    <!-- This div stays hidden until login.js puts an error message in it -->
+    <div id="login-error" class="login-error"></div>
+
+    <!-- Username field -->
+    <div class="form-group">
+      <label class="form-label">Username <span class="required">*</span></label>
+      <input type="text" id="username" class="form-control" placeholder="e.g. amina.lado" autofocus>
+      <div class="form-error" id="username-error">Username is required</div>
+    </div>
+
+    <!-- Password field with a show/hide toggle button -->
+    <div class="form-group">
+      <label class="form-label">Password <span class="required">*</span></label>
+      <div class="password-wrapper">
+        <input type="password" id="password" class="form-control" placeholder="Enter your password">
+        <button onclick="togglePassword()" class="password-toggle" id="toggle-pwd">Show</button>
+      </div>
+      <div class="form-error" id="password-error">Password is required</div>
+    </div>
+
+    <!-- Remember me checkbox and forgot password link -->
+    <div class="login-remember-row">
+      <label class="login-remember-label">
+        <input type="checkbox" id="remember"> Remember me
+      </label>
+      <a href="#" class="login-forgot-link">Forgot password?</a>
+    </div>
+
+    <!-- Login button — calls handleLogin() in login.js -->
+    <button class="btn btn-primary login-btn" id="login-btn" onclick="handleLogin()">Login</button>
+
+  </div>
+</div>
+
+<script src="../assets/js/utils.js"></script>
+<script src="login.js"></script>
+
+</body>
+</html>

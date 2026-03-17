@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — CCMS</title>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="stylesheet" href="/reports/reports.css" />
+</head>
+<body>
+
+<!-- Full-page spinner shown while report data is being fetched -->
+<div id="global-spinner" class="global-spinner-overlay">
+  <span class="spinner spinner-dark spinner-lg"></span>
+</div>
+
+<div class="layout">
+  <!-- Header and sidebar injected by reports.js via utils.js -->
+  <div id="header-slot"></div>
+  <div id="sidebar-slot"></div>
+
+  <main class="main">
+
+    <div class="page-header page-header-full">
+      <div class="page-heading">
+        <h1 class="page-title">Reports</h1>
+        <p class="page-subtitle">Generate financial, clinical, and operational insights</p>
+      </div>
+    </div>
+
+    <!-- Left sidebar panel: report type tabs and date range inputs -->
+    <div class="sidebar-panel">
+      <h3 class="panel-heading">Report Generator</h3>
+
+      <!-- Tab buttons — reports.js hides Financial, Operational, and Patient tabs for doctors -->
+      <div class="report-tabs">
+        <button class="report-tab active" onclick="switchReport('financial', this)">Financial</button>
+        <button class="report-tab" onclick="switchReport('clinical', this)">Clinical</button>
+        <button class="report-tab" onclick="switchReport('operational', this)">Operational</button>
+        <button class="report-tab" onclick="switchReport('patient', this)">Patients</button>
+      </div>
+
+      <!-- Financial report panel: calls /api/reports/financial with the selected date range -->
+      <div class="report-panel active" id="panel-financial">
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>Date From</label>
+          <input type="date" id="fin-from" class="form-control" title="Financial report start date" />
+        </div>
+        <div class="form-group">
+          <label>Date To</label>
+          <input type="date" id="fin-to" class="form-control" title="Financial report end date" />
+        </div>
+        <button class="btn btn-primary generate-btn" onclick="generateReport('financial')">Generate Report</button>
+      </div>
+
+      <!-- Clinical report panel: calls /api/reports/clinical — accessible to both admin and doctor -->
+      <div class="report-panel" id="panel-clinical">
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>Date From</label>
+          <input type="date" id="cli-from" class="form-control" title="Clinical report start date" />
+        </div>
+        <div class="form-group">
+          <label>Date To</label>
+          <input type="date" id="cli-to" class="form-control" title="Clinical report end date" />
+        </div>
+        <button class="btn btn-primary generate-btn" onclick="generateReport('clinical')">Generate Report</button>
+      </div>
+
+      <!-- Operational report panel: calls /api/reports/operational -->
+      <div class="report-panel" id="panel-operational">
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>Date From</label>
+          <input type="date" id="op-from" class="form-control" title="Operational report start date" />
+        </div>
+        <div class="form-group">
+          <label>Date To</label>
+          <input type="date" id="op-to" class="form-control" title="Operational report end date" />
+        </div>
+        <button class="btn btn-primary generate-btn" onclick="generateReport('operational')">Generate Report</button>
+      </div>
+
+      <!-- Patient report panel: built client-side from /api/patients — date range is optional -->
+      <div class="report-panel" id="panel-patient">
+        <div class="divider"></div>
+        <div class="form-group">
+          <label>Date From (optional)</label>
+          <input type="date" id="pat-from" class="form-control" title="Patient report start date (optional)" />
+        </div>
+        <div class="form-group">
+          <label>Date To (optional)</label>
+          <input type="date" id="pat-to" class="form-control" title="Patient report end date (optional)" />
+        </div>
+        <button class="btn btn-primary generate-btn" onclick="generateReport('patient')">Generate Report</button>
+      </div>
+
+    </div>
+
+    <!-- Right results panel: placeholder shown until a report is generated -->
+    <div class="results-panel">
+
+      <!-- Shown by default — hidden once generateReport() runs successfully -->
+      <div class="results-placeholder" id="results-placeholder">
+        <div class="results-placeholder-icon"></div>
+        <div class="results-placeholder-text">Select a report type and date range, then click Generate.</div>
+      </div>
+
+      <!-- Results area: summary cards, optional chart, and detail table -->
+      <!-- reports.js toggles this visible and populates each section -->
+      <div id="results-content" class="hidden">
+        <div id="summary-cards"></div>
+        <div id="chart-container"></div>
+        <div id="detail-table"></div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script src="/assets/js/utils.js"></script>
+<script src="/reports/reports.js"></script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointments — CCMS</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="appointments.css">
+</head>
+<body>
+
+<!-- Full-page spinner shown while appointments are loading -->
+<div id="global-spinner" class="global-spinner-overlay">
+  <span class="spinner spinner-dark spinner-lg"></span>
+</div>
+
+<!-- View appointment modal — shows details and the 3-step status tracker -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal modal-520">
+    <div class="modal-header">
+      <h3 class="modal-title">Appointment Details</h3>
+      <button class="modal-close" onclick="closeViewModal()">X</button>
+    </div>
+
+    <!-- Patient and appointment info grid -->
+    <div class="mb-16">
+      <div class="grid-two-col">
+        <div>
+          <div class="meta-label">Patient Name</div>
+          <div class="meta-value" id="vm-patient-name">—</div>
+        </div>
+        <div>
+          <div class="meta-label">Clinic Number</div>
+          <div class="meta-value" id="vm-clinic-number">—</div>
+        </div>
+        <div>
+          <div class="meta-label">Doctor</div>
+          <div class="text-sm" id="vm-doctor">—</div>
+        </div>
+        <div>
+          <div class="meta-label">Date & Time</div>
+          <div class="text-sm" id="vm-datetime">—</div>
+        </div>
+        <div class="full-col">
+          <div class="meta-label">Reason</div>
+          <div class="text-sm" id="vm-reason">—</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- 3-step status tracker: Pending → Approved → Completed -->
+    <!-- appointments.js colours the dots and lines based on the current status -->
+    <div>
+      <div class="status-title">Consultation Status</div>
+      <div class="status-row">
+        <div id="vm-step-pending" class="status-step">
+          <span id="vm-dot-pending" class="status-dot"></span>
+          Pending
+        </div>
+        <div class="status-line" id="vm-line-1"></div>
+        <div id="vm-step-approved" class="status-step status-muted">
+          <span id="vm-dot-approved" class="status-dot status-dot-muted"></span>
+          Approved
+        </div>
+        <div class="status-line" id="vm-line-2"></div>
+        <div id="vm-step-completed" class="status-step status-muted">
+          <span id="vm-dot-completed" class="status-dot status-dot-muted"></span>
+          Completed
+        </div>
+      </div>
+
+      <!-- Action buttons are injected here by openViewModal() based on role and status -->
+      <div id="vm-actions" class="actions-wrap"></div>
+    </div>
+
+    <div class="modal-footer modal-footer-top">
+      <button class="btn btn-outline" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Consultation modal — only doctors see this, opened after approving an appointment -->
+<div class="modal-overlay" id="consultation-modal">
+  <div class="modal modal-600">
+    <div class="modal-header">
+      <!-- Title is set dynamically to include the patient name -->
+      <h3 class="modal-title" id="cons-title">Consultation</h3>
+      <button class="modal-close" onclick="closeConsultationModal()">X</button>
+    </div>
+
+    <!-- Patient summary banner at the top of the consultation form -->
+    <div id="cons-patient-banner" class="cons-banner">
+      <div><span class="text-muted">Patient: </span><strong id="cons-patient-name">—</strong></div>
+      <div><span class="text-muted">Clinic #: </span><strong id="cons-clinic-num">—</strong></div>
+      <div><span class="text-muted">Date: </span><strong id="cons-date">—</strong></div>
+    </div>
+
+    <!-- General notes field for examination findings and observations -->
+    <div class="form-group">
+      <label class="form-label">Consultation Notes</label>
+      <textarea id="cons-notes" class="form-control" rows="3"
+                placeholder="Observations, examination findings, treatment given..."></textarea>
+    </div>
+
+    <!-- Diagnoses section — addDiagnosisRow() appends input rows dynamically -->
+    <div class="form-group">
+      <label class="form-label">Diagnoses</label>
+      <div id="diagnoses-list" class="stack-6 mb-6"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="addDiagnosisRow()">+ Add Diagnosis</button>
+    </div>
+
+    <!-- Prescriptions section — addPrescriptionRow() appends drug/dosage/duration rows -->
+    <div class="form-group">
+      <label class="form-label">Prescriptions</label>
+      <div id="prescriptions-list" class="stack-8 mb-6"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="addPrescriptionRow()">+ Add Prescription</button>
+    </div>
+
+    <!-- Submitting creates a visit, saves diagnoses and prescriptions, then marks the appointment completed -->
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeConsultationModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitConsultation()">Save &amp; Complete Appointment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Post-consultation summary modal — shown after a consultation is saved -->
+<div class="modal-overlay" id="summary-modal">
+  <div class="modal modal-520">
+    <div class="modal-header summary-modal-header">
+      <h3 class="modal-title summary-modal-title">Consultation Complete</h3>
+      <button class="modal-close" onclick="closeSummaryModal()">X</button>
+    </div>
+    <div id="summary-body" class="summary-modal-body">
+      <!-- filled dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="window.print()">Print</button>
+      <button class="btn btn-primary" onclick="closeSummaryModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Booking modal — 3-step wizard: patient search → doctor & date → time slot & reason -->
+<div class="modal-overlay" id="booking-modal">
+  <div class="modal modal-540">
+    <div class="modal-header">
+      <h3 class="modal-title">Schedule Appointment</h3>
+      <button class="modal-close" onclick="closeBookingModal()">X</button>
+    </div>
+
+    <!-- Step indicator bar — bookingNextStep() updates the dot colours -->
+    <div class="booking-steps">
+      <div id="step1-indicator" class="step-indicator step-active">
+        <span id="step1-dot" class="step-dot step-dot-active">1</span>
+        Patient
+      </div>
+      <div class="step-line"></div>
+      <div id="step2-indicator" class="step-indicator step-inactive">
+        <span id="step2-dot" class="step-dot step-dot-inactive">2</span>
+        Doctor & Date
+      </div>
+      <div class="step-line"></div>
+      <div id="step3-indicator" class="step-indicator step-inactive">
+        <span id="step3-dot" class="step-dot step-dot-inactive">3</span>
+        Time & Reason
+      </div>
+    </div>
+
+    <!-- Step 1: search for a patient by name or clinic number -->
+    <div id="booking-step-1">
+      <div class="form-group">
+        <label class="form-label">Search Patient <span class="required">*</span></label>
+        <input type="text" id="patient-search-input" class="form-control"
+               placeholder="Type patient name or clinic number..." autocomplete="off">
+        <!-- Dropdown results appear here as the user types -->
+        <div id="patient-search-results" class="search-results"></div>
+        <input type="hidden" id="selected-patient-id">
+        <!-- Confirmation text shown once a patient is selected -->
+        <div id="selected-patient-display" class="selected-patient"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeBookingModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="bookingNextStep(2)">Next: Choose Doctor →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: pick a doctor card and select a date -->
+    <div id="booking-step-2" class="is-hidden">
+      <div class="form-group">
+        <label class="form-label">Select Doctor <span class="required">*</span></label>
+        <!-- Doctor cards are rendered by renderDoctorCards() in appointments.js -->
+        <div id="doctor-cards" class="doctor-cards"></div>
+        <input type="hidden" id="booking-doctor">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Appointment Date <span class="required">*</span></label>
+        <!-- Changing the date triggers loadAvailableSlots() to fetch open time slots -->
+        <input type="date" id="booking-date" class="form-control" title="Appointment date" onchange="loadAvailableSlots()">
+        <div class="helper-text">Select a doctor first, then pick a date to see available slots</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="bookingNextStep(1)">← Back</button>
+        <button class="btn btn-primary" onclick="bookingNextStep(3)">Next: Pick Time →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: choose a time slot and optionally enter a reason -->
+    <div id="booking-step-3" class="is-hidden">
+      <div class="form-group">
+        <label class="form-label">Available Time Slots <span class="required">*</span></label>
+        <!-- Slot buttons are rendered by loadAvailableSlots() — already-booked slots are excluded -->
+        <div id="time-slots" class="time-slots">
+          <span class="hint-text">Select a doctor and date first</span>
+        </div>
+        <input type="hidden" id="selected-time">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reason for Visit</label>
+        <textarea id="booking-reason" class="form-control" rows="2" placeholder="Briefly describe the reason for this appointment..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="bookingNextStep(2)">← Back</button>
+        <button class="btn btn-primary" onclick="submitBooking()">Confirm Appointment</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="layout">
+  <div id="header-slot"></div>
+  <div id="sidebar-slot"></div>
+
+  <main class="main">
+
+    <div class="page-header">
+      <h1 class="page-title">Appointments</h1>
+      <!-- Schedule button is hidden for doctors — they can only view and action appointments -->
+      <button class="btn btn-primary"
+              data-role="admin,receptionist"
+              onclick="openBookingModal()">
+        + Schedule Appointment
+      </button>
+    </div>
+
+    <!-- Toggle between the list table and the weekly calendar grid -->
+    <div class="tabs">
+      <button class="tab-btn active"
+              onclick="switchView('list', this)">
+        List View
+      </button>
+      <button class="tab-btn"
+              onclick="switchView('calendar', this)">
+        Calendar View
+      </button>
+    </div>
+
+    <!-- Search bar — filterAppointments() runs on every keystroke -->
+    <div class="mb-16">
+      <div class="apt-search-wrap">
+        <span class="apt-search-icon"></span>
+        <input type="text" id="apt-search" placeholder="Search patient, doctor, or reason..."
+          class="apt-search-input"
+          oninput="filterAppointments(this.value)" />
+        <button id="apt-search-clear" onclick="clearAptSearch()"
+          class="apt-search-clear">Clear</button>
+      </div>
+    </div>
+
+    <!-- List view: paginated table of all appointments -->
+    <div id="view-list">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>Date & Time</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <!-- Rows are injected by renderTable() in appointments.js -->
+          <tbody id="appointments-tbody">
+            <tr><td colspan="6">
+              <div class="empty-state">
+                <div class="empty-state-text">
+                  No appointments booked yet
+                </div>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+        <!-- Pagination info and controls rendered by renderTable() -->
+        <div class="pagination">
+          <span class="pagination-info"
+                id="apt-pagination-info"></span>
+          <div id="apt-pagination-controls" class="pagination-controls">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar view: weekly grid — hidden by default, shown when the Calendar tab is clicked -->
+    <div id="view-calendar" class="is-hidden">
+      <div class="card">
+        <!-- Week navigation — changeWeek() shifts the offset and re-renders the grid -->
+        <div class="calendar-header-row">
+          <button class="btn btn-outline btn-sm"
+                  onclick="changeWeek(-1)">
+            ← Prev Week
+          </button>
+          <strong id="week-label" class="week-label"></strong>
+          <button class="btn btn-outline btn-sm"
+                  onclick="changeWeek(1)">
+            Next Week →
+          </button>
+        </div>
+        <!-- Calendar grid is built entirely by renderCalendar() in appointments.js -->
+        <div id="calendar-grid" class="calendar-grid-wrap">
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../assets/js/utils.js"></script>
+<script src="appointments.js"></script>
+</body>
+</html>

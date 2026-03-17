@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Doctors - HealthHub Bridge</title>
+	<link rel="stylesheet" href="/assets/css/style.css" />
+	<link rel="stylesheet" href="/doctors/doctors.css" />
+</head>
+<body>
+
+	<!-- Full-page spinner shown while doctors and schedules load -->
+	<div id="global-spinner" class="spinner-overlay is-hidden">
+		<span class="spinner"></span>
+	</div>
+
+	<div class="layout">
+		<!-- Header and sidebar injected by doctors.js via utils.js -->
+		<div id="header-slot"></div>
+		<div id="sidebar-slot"></div>
+
+		<main class="main">
+
+			<div class="page-header">
+				<div class="page-heading">
+					<h1 class="page-title">Doctors</h1>
+					<p class="page-subtitle">Manage active clinicians and review weekly shift schedules.</p>
+				</div>
+				<!-- Refresh button reloads both doctors and schedules from the API -->
+				<button id="refresh-btn" class="btn btn-outline btn-sm" type="button">Refresh</button>
+			</div>
+
+			<!-- Summary strip — counts are filled in by renderSummary() in doctors.js -->
+			<div class="summary-strip">
+				<div class="summary-card">
+					<div class="summary-label">Active Doctors</div>
+					<div class="summary-value" id="summary-doctors">0</div>
+				</div>
+				<div class="summary-card">
+					<div class="summary-label">Specializations</div>
+					<div class="summary-value" id="summary-specializations">0</div>
+				</div>
+				<div class="summary-card">
+					<div class="summary-label">Doctors With Schedules</div>
+					<div class="summary-value" id="summary-scheduled">0</div>
+				</div>
+			</div>
+
+			<!-- Search and specialization filter — doctors.js debounces the search input -->
+			<div class="filter-bar">
+				<input id="search-input" class="form-control" placeholder="Search doctor by name, phone, or email" />
+				<select id="specialization-filter" class="form-control" aria-label="Filter by specialization">
+					<option value="">All Specializations</option>
+					<!-- Options are populated dynamically from the loaded doctor data -->
+				</select>
+			</div>
+
+			<!-- Two-panel layout: doctor list on the left, schedule on the right -->
+			<div class="doctors-grid">
+
+				<!-- Left panel: searchable, filterable doctor directory -->
+				<section class="panel">
+					<div class="panel-head">
+						<div>
+							<div class="panel-title">Doctor Directory</div>
+							<div class="panel-subtitle">Search, filter, and select a doctor to inspect schedule details.</div>
+						</div>
+						<!-- Badge updates to show how many doctors match the current filters -->
+						<span id="doctor-count" class="badge">0 doctors</span>
+					</div>
+					<div class="table-wrapper">
+						<table>
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Specialization</th>
+									<th>Phone</th>
+									<th>Email</th>
+								</tr>
+							</thead>
+							<!-- Rows are injected by renderDoctors() — clicking a row shows that doctor's schedule -->
+							<tbody id="doctor-table-body">
+								<tr>
+									<td colspan="4" class="text-muted">Loading doctors...</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<!-- Right panel: weekly schedule for whichever doctor is selected -->
+				<section class="panel">
+					<div class="panel-head">
+						<div>
+							<div class="panel-title">Schedule</div>
+							<div class="panel-subtitle">Weekly schedule slots for the selected doctor.</div>
+						</div>
+					</div>
+					<div class="panel-body">
+						<!-- Name updates when a doctor row is clicked -->
+						<div id="selected-doctor-name" class="text-muted">Select a doctor to view weekly schedule.</div>
+						<!-- Day cards are rendered by renderSchedule() in doctors.js -->
+						<div id="schedule-container" class="day-grid schedule-container"></div>
+					</div>
+				</section>
+
+			</div>
+		</main>
+	</div>
+
+	<script src="/assets/js/utils.js"></script>
+	<script src="/doctors/doctors.js"></script>
+</body>
+</html>
