@@ -24,6 +24,7 @@ def get_appointments():
     # Build the query dynamically based on which filters were provided
     query  = """
         SELECT a.appointment_id, a.appointment_datetime, a.reason, a.status,
+               a.patient_id, a.doctor_id,
                p.first_name, p.last_name, p.clinic_number,
                d.full_name AS doctor_name
         FROM appointments a
@@ -73,6 +74,7 @@ def get_today_appointments():
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
             SELECT a.appointment_id, a.appointment_datetime, a.reason, a.status,
+                   a.patient_id, a.doctor_id,
                    p.first_name, p.last_name, p.clinic_number,
                    d.full_name AS doctor_name
             FROM appointments a
