@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Profile — CCMS</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/patients/profile.css">
+</head>
+<body>
+
+<!-- Full-page spinner shown while profile data loads -->
+<div id="global-spinner" class="global-spinner-overlay">
+  <span class="spinner spinner-dark spinner-lg"></span>
+</div>
+
+<!-- Edit patient modal — only phone, email, blood type, insurance, address, and emergency contact are editable -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Patient Info</h3>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="tel" id="edit-phone" class="form-control" placeholder="+211 912 000 000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="edit-email" class="form-control" placeholder="patient@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Blood Type</label>
+        <select id="edit-blood-type" class="form-control" title="Blood Type">
+          <option value="">Unknown</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>AB+</option><option>AB-</option>
+          <option>O+</option><option>O-</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Insurance Provider</label>
+        <input type="text" id="edit-insurance" class="form-control" placeholder="e.g. NHIF">
+      </div>
+      <div class="form-group full-span">
+        <label class="form-label">Address</label>
+        <textarea id="edit-address" class="form-control" rows="2" placeholder="Patient address"></textarea>
+      </div>
+      <div class="form-group full-span">
+        <label class="form-label">Emergency Contact</label>
+        <input type="text" id="edit-emergency" class="form-control" placeholder="Name — +211 912 000 000">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePatient()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create invoice modal — triggered from the Billing tab -->
+<div class="modal-overlay" id="invoice-modal">
+  <div class="modal modal-invoice">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Invoice</h3>
+      <button class="modal-close" onclick="closeInvoiceModal()">×</button>
+    </div>
+    <!-- Summary of the visit this invoice is being created for -->
+    <div class="visit-summary-box">
+      <div class="visit-summary-heading">Visit Summary</div>
+      <div><span class="visit-summary-muted">Doctor: </span><span id="inv-doctor">—</span> · <span class="visit-summary-muted">Date: </span><span id="inv-visit-date">—</span></div>
+      <div class="visit-summary-diagnoses"><span class="visit-summary-muted">Diagnoses: </span><span id="inv-diagnoses">—</span></div>
+    </div>
+    <!-- Service line items — rows are added dynamically by addInvoiceRow() -->
+    <div class="form-group">
+      <div class="invoice-service-label-row">
+        <label class="form-label">Services</label>
+        <button type="button" class="btn btn-outline btn-sm" onclick="addInvoiceRow()">+ Add Row</button>
+      </div>
+      <table class="invoice-service-table">
+        <thead>
+          <tr class="invoice-service-table-header">
+            <th class="col-service">Service</th>
+            <th class="col-qty">Quantity</th>
+            <th class="col-price">Price (SSP)</th>
+            <th class="col-remove"></th>
+          </tr>
+        </thead>
+        <tbody id="inv-items-tbody"></tbody>
+      </table>
+    </div>
+    <!-- Discount input and running total — total updates live via updateInvTotal() -->
+    <div class="invoice-discount-row">
+      <label class="invoice-discount-label">Discount (SSP):
+        <input type="number" id="inv-discount" value="0" min="0" step="0.01"
+          class="invoice-discount-input"
+          oninput="updateInvTotal()">
+      </label>
+      <div class="invoice-total-display">Total: <span id="inv-total">SSP 0.00</span></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeInvoiceModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitInvoice()">Create Invoice</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <div id="header-slot"></div>
+  <div id="sidebar-slot"></div>
+
+  <main class="main">
+
+    <div class="page-header">
+      <h1 class="page-title" id="page-title">Patient Profile</h1>
+      <div class="inline-actions">
+        <a href="/patients/list.html" class="btn btn-outline btn-sm">← Back</a>
+        <!-- Edit button is hidden for doctors -->
+        <button class="btn btn-primary btn-sm" data-role="admin,receptionist" onclick="openEditModal()">Edit</button>
+      </div>
+    </div>
+
+    <!-- Personal and medical info cards side by side -->
+    <div class="profile-grid">
+      <div class="card">
+        <div class="card-title">Personal Information</div>
+        <div id="personal-info"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Medical Information</div>
+        <div id="medical-info"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></div>
+      </div>
+    </div>
+
+    <!-- Quick stats row — visits, diagnoses, prescriptions, open invoices -->
+    <div class="stats-grid summary-spacing" id="patient-summary">
+      <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Visits</div></div>
+      <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Diagnoses</div></div>
+      <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Active Prescriptions</div></div>
+      <div class="stat-card"><div class="stat-card-value">—</div><div class="stat-card-label">Open Invoices</div></div>
+    </div>
+
+    <!-- Tab navigation — profile.js handles switching between panels -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('visits', this)">Medical Visits</button>
+      <button class="tab-btn" onclick="switchTab('prescriptions', this)">Prescriptions</button>
+      <button class="tab-btn" onclick="switchTab('appointments', this)">Appointments</button>
+      <button class="tab-btn" onclick="switchTab('billing', this)">Billing</button>
+    </div>
+
+    <!-- Medical visits tab -->
+    <div id="tab-visits" class="tab-content active">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Date</th><th>Doctor</th><th>Diagnoses</th><th>Notes</th><th data-role="admin,receptionist"></th></tr></thead>
+          <tbody id="visits-tbody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Prescriptions tab -->
+    <div id="tab-prescriptions" class="tab-content">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Drug</th><th>Dosage</th><th>Duration</th><th>Visit Date</th><th>Status</th></tr></thead>
+          <tbody id="prescriptions-tbody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Appointments tab -->
+    <div id="tab-appointments" class="tab-content">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Date & Time</th><th>Doctor</th><th>Reason</th><th>Status</th></tr></thead>
+          <tbody id="appts-tbody">
+            <tr><td colspan="4"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Billing tab — shows invoices for this patient -->
+    <div id="tab-billing" class="tab-content">
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Invoice #</th><th>Date</th><th>Total</th><th>Amount Due</th><th>Status</th><th></th></tr></thead>
+          <tbody id="billing-tbody">
+            <tr><td colspan="6"><div class="empty-state"><div class="empty-state-text">Loading...</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/assets/js/utils.js"></script>
+<script src="/patients/profile.js"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register Patient — HealthHub Bridge</title>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="stylesheet" href="/patients/register.css" />
+</head>
+<body>
+
+<!-- Full-page spinner shown while the form is submitting -->
+<div id="global-spinner" class="global-spinner-overlay">
+  <span class="spinner spinner-dark spinner-lg"></span>
+</div>
+
+<div class="layout">
+  <div id="header-slot"></div>
+  <div id="sidebar-slot"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">Register Patient</h1>
+    </div>
+
+    <!-- 2-step wizard — register.js controls which panel is visible -->
+    <div class="wizard-container">
+
+      <!-- Step indicators at the top of the wizard -->
+      <div class="wizard-steps">
+        <div class="wizard-step active" id="step-1-indicator">
+          <div class="wizard-step-number">1</div>
+          <span>Basic Info</span>
+        </div>
+        <div class="wizard-divider"></div>
+        <div class="wizard-step" id="step-2-indicator">
+          <div class="wizard-step-number">2</div>
+          <span>Medical & Consent</span>
+        </div>
+      </div>
+
+      <div class="wizard-content">
+
+        <!-- Step 1: personal details -->
+        <div class="wizard-panel active" id="step-1">
+          <h2>Basic Information</h2>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="firstName">First Name <span class="required">*</span></label>
+              <input type="text" id="firstName" placeholder="e.g. Amina" />
+              <div class="field-error" id="firstName-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="lastName">Last Name <span class="required">*</span></label>
+              <input type="text" id="lastName" placeholder="e.g. Lado" />
+              <div class="field-error" id="lastName-error"></div>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="date_of_birth">Date of Birth <span class="required">*</span></label>
+              <input type="date" id="date_of_birth" />
+              <div class="field-error" id="date_of_birth-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="gender">Gender</label>
+              <select id="gender">
+                <option value="">Select Gender</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="phone">Phone <span class="required">*</span></label>
+              <input type="tel" id="phone" placeholder="+211 912 000 000" />
+              <div class="field-error" id="phone-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="email">Email (Optional)</label>
+              <input type="email" id="email" placeholder="patient@example.com" />
+              <div class="field-error" id="email-error"></div>
+            </div>
+          </div>
+          <div class="form-grid-1">
+            <div class="form-group">
+              <label for="address">Address (Optional)</label>
+              <textarea id="address" rows="2" placeholder="Enter full address"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: medical info, emergency contact, and consent checkbox -->
+        <div class="wizard-panel" id="step-2">
+          <h2>Medical & Emergency Information</h2>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="bloodType">Blood Type</label>
+              <select id="bloodType">
+                <option value="">Select Blood Type</option>
+                <option>A+</option><option>A-</option>
+                <option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option>
+                <option>O+</option><option>O-</option>
+                <option value="Unknown">Unknown</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="insurance">Insurance Provider (Optional)</label>
+              <input type="text" id="insurance" placeholder="e.g. NHIF" />
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="emergency_contact_name">Emergency Contact Name</label>
+              <input type="text" id="emergency_contact_name" placeholder="Full name" />
+            </div>
+            <div class="form-group">
+              <label for="emergency_contact_phone">Emergency Contact Phone</label>
+              <input type="tel" id="emergency_contact_phone" placeholder="+211..." />
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="nationalId">National ID (Optional)</label>
+              <input type="text" id="nationalId" />
+            </div>
+            <div class="form-group">
+              <label>Clinic Number</label>
+              <!-- Live preview of the auto-generated clinic number -->
+              <div class="clinic-preview" id="clinic-number-preview">CLN-0000</div>
+              <input type="text" id="clinicNumber" placeholder="Leave blank for auto-generation" class="clinic-number-input" />
+            </div>
+          </div>
+          <!-- Consent must be checked before the form can be submitted -->
+          <div class="consent-row">
+            <input type="checkbox" id="consent" />
+            <label for="consent">
+              I confirm this patient consents to storage and use of their health data for treatment and reporting.
+            </label>
+          </div>
+          <div class="field-error" id="consent-error"></div>
+        </div>
+
+      </div>
+
+      <!-- Navigation buttons — register.js shows/hides these based on the current step -->
+      <div class="wizard-actions">
+        <button class="btn btn-outline" id="back-btn" onclick="previousStep()">← Back</button>
+        <button class="btn btn-primary" id="next-btn" onclick="nextStep()">Next →</button>
+        <button class="btn btn-success" id="submit-btn" onclick="submitForm()">Register Patient</button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Success overlay shown after a patient is registered successfully -->
+<div class="success-overlay" id="success-modal">
+  <div class="success-box">
+    <div class="success-check">OK</div>
+    <h3>Patient Registered!</h3>
+    <div class="success-clinic" id="success-clinic-number">CLN-0000</div>
+    <p>Patient has been registered successfully.</p>
+    <div class="success-actions">
+      <button class="btn btn-primary" onclick="viewPatientProfile()">View Patient Profile</button>
+      <button class="btn btn-outline" onclick="schedulePatientAppointment()">Schedule Appointment</button>
+      <button class="btn btn-outline" onclick="registerAnother()">Register Another</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/utils.js"></script>
+<script src="/patients/register.js"></script>
+</body>
+</html>
