@@ -243,7 +243,6 @@
   // Main data loader for dashboard cards and panels.
   async function loadDashboard() {
     const [appointmentsResult, patientsResult, invoicesResult] = await Promise.allSettled([
-      apiFetch('/api/appointments/today'),
       apiFetch('/api/appointments/upcoming'),
       apiFetch('/api/patients'),
       apiFetch('/api/invoices')
