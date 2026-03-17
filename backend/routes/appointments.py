@@ -200,6 +200,8 @@ def book_appointment():
     return jsonify({'id': new_id, 'message': 'Appointment booked successfully'}), 201
 
 
+ALLOWED_TRANSACTIONS = {'Scheduled': {'Completed', 'Cancelled', 'No-show'},}
+
 # route to update appointment status (e.g. mark as Completed, Cancelled, No-show)
 @appointments_bp.route('/appointments/<int:appointment_id>', methods=['PATCH'])
 @login_required
