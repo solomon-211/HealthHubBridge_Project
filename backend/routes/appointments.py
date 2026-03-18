@@ -93,36 +93,6 @@ def week_summary():
     cache_set(cache_key, summary, ttl=120)
     return jsonify({'summary': summary, 'source': 'db'}), 200
 
-@appointments_bp.route('/appointments/upcoming', methods=['GET'])
-@login_required
-def get_upcoming_appointments():
-    cache_key = 'appointments:upcoming'
-    cached = cache_get(cache_key)
-    if cached:
-        return jsonify({'appointments': cached, 'source': 'cache'}), 200
- 
-    try:
-        conn   = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT a.appointment_id, a.appointment_datetime, a.reason, a.status,
-                   a.patient_id, a.doctor_id,
-                   p.first_name, p.last_name, p.clinic_number,
-                   d.full_name AS doctor_name
-            FROM appointments a
-            JOIN patients p ON a.patient_id = p.patient_id
-            JOIN doctors  d ON a.doctor_id  = d.doctor_id
-            WHERE a.status = 'Scheduled'
-              AND a.appointment_datetime >= NOW()
-            ORDER BY a.appointment_datetime
-        """)
-        appointments = cursor.fetchall()
-        conn.close()
-    except Exception as e:
-        return jsonify({'error': 'Could not retrieve upcoming appointments.', 'details': str(e)}), 503
- 
-    cache_set(cache_key, appointments, ttl=60)
-    return jsonify({'appointments': appointments, 'source': 'db'}), 200
 
 
 @appointments_bp.route('/appointments/upcoming', methods=['GET'])
