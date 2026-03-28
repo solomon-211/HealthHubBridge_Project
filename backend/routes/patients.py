@@ -99,12 +99,15 @@ def register_patient():
         conn.commit()
         new_id = cursor.lastrowid
         conn.close()
-    except mysql_error(1062):
-        # Duplicate clinic_number — give a specific, helpful message
-        return jsonify({'error': f"Clinic number '{data['clinic_number']}' is already registered"}), 409
-    except Exception as e:
-        return jsonify({'error': 'Registration failed. Please try again.', 'details': str(e)}), 503
 
+    # Handle duplicate clinic number error gracefully with a clear message
+    except IntegrityError as e:
+        if e.errno == 1062:
+            return jsonify({'error': f"Clinic number '{data['clinic_number']}' is already registered"}), 409
+        raise  # re-raise anything else
+    except Exception as e:
+        return jsonify({'error': 'Registration failed.', 'details': str(e)}), 503
+    
     # Invalidate the patients list cache so the new patient appears
     cache_invalidate('patients')
 
@@ -177,15 +180,3 @@ def update_patient(patient_id):
     cache_invalidate('patients:')
 
     return jsonify({'message': 'Patient updated successfully'}), 200
-
-
-# Local helper to catch duplicate-entry errors by code
-def mysql_error(code):
-    """Returns the mysql.connector IntegrityError class for use in except clauses."""
-    import mysql.connector
-    class _Err(Exception):
-        pass
-    # Return the real error class filtered by code
-    class CodedError(mysql.connector.IntegrityError):
-        pass
-    return CodedError
