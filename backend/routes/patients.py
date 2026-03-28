@@ -1,9 +1,19 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Blueprint, request, jsonify
 from config import get_db_connection
 from cache import cache_get, cache_set, cache_invalidate
 from routes.auth import login_required
+from mysql.connector import IntegrityError
 
 patients_bp = Blueprint('patients', __name__)
+
+def serialize(row):
+    #Convert any date/datetime values in a dict to ISO strings for JSON serialization.
+    if row is None:
+        return None
+    return {k: (v.isoformat() if hasattr(v, 'isoformat') else v) for k, v in row.items()}
 
 
 # route to get all patients, with optional search by name or clinic number
@@ -44,7 +54,7 @@ def get_patients():
                 ORDER BY last_name
             """)
 
-        patients = cursor.fetchall()
+        patients = [serialize(row) for row in cursor.fetchall()]
         conn.close()
     except Exception as e:
         return jsonify({'error': 'Could not retrieve patients. Check connection.', 'details': str(e)}), 503
@@ -114,7 +124,7 @@ def get_patient(patient_id):
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM patients WHERE patient_id = %s", (patient_id,))
-        patient = cursor.fetchone()
+        patient = serialize(cursor.fetchone())
         conn.close()
     except Exception as e:
         return jsonify({'error': 'Could not retrieve patient.', 'details': str(e)}), 503
