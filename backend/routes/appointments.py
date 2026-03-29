@@ -7,7 +7,7 @@ from datetime import datetime, date
 appointments_bp = Blueprint('appointments', __name__)
 
 
-# List and filter appointments; results cached briefly to ease load on busy days.
+# route to get appointments, with optional filters for doctor, status, or date
 @appointments_bp.route('/appointments', methods=['GET'])
 @login_required
 def get_appointments():
