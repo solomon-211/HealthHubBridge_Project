@@ -1,3 +1,4 @@
+"""Authentication blueprint: login/logout and decorators for session checks."""
 from flask import Blueprint, request, jsonify, session
 from config import get_db_connection, Config
 import hashlib
@@ -7,6 +8,7 @@ auth_bp = Blueprint('auth', __name__)
 
 
 def hash_password(password):
+    # Passwords in DB are stored as SHA-256 hex (same as registration flow).
     return hashlib.sha256(password.encode()).hexdigest()
 
 
@@ -52,6 +54,7 @@ def logout():
 
 
 def login_required(f):
+    """Require a logged-in user; also enforce max session length from Config."""
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -68,6 +71,7 @@ def login_required(f):
 
 
 def role_required(*allowed_roles):
+    """Restrict a route to admin / doctor / receptionist (compare case-insensitive)."""
     from functools import wraps
     def decorator(f):
         @wraps(f)

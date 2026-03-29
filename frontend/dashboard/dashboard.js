@@ -1,3 +1,4 @@
+// Dashboard page: stats + upcoming appointments + recent patients + payment snapshot.
 authGuard();
 checkSessionTimeout();
 
@@ -106,6 +107,7 @@ function renderRecentPatients(patients) {
 }
 
 async function loadDashboard() {
+  // Grabs three endpoints at once; failed calls get a message in that card only.
   const [appointmentsResult, patientsResult, invoicesResult] = await Promise.allSettled([
     apiFetch('/api/appointments'),
     apiFetch('/api/patients'),

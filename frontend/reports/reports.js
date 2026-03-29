@@ -1,3 +1,4 @@
+// Reports UI: financial / clinical / operational from API; patient tab filters client-side.
 authGuard();
 checkRole(['admin', 'doctor']) || (location.href = '/dashboard/index.html');
 checkSessionTimeout();
@@ -32,6 +33,7 @@ function switchReport(type, btn) {
 }
 
 async function generateReport(type) {
+  // Patient report uses /api/patients; other tabs call /api/reports/<type>?from=&to=
   if (type === 'patient') {
     const from = document.getElementById('pat-from').value;
     const to   = document.getElementById('pat-to').value;

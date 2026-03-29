@@ -1,3 +1,4 @@
+// If already logged in, skip this page (sessionStorage set after successful POST /login).
 if (sessionStorage.getItem('role')) {
   window.location.href = '/dashboard/index.html';
 }

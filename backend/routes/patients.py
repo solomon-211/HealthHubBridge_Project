@@ -8,8 +8,11 @@ from routes.auth import login_required
 from mysql.connector import IntegrityError
 
 patients_bp = Blueprint('patients', __name__)
+# Endpoints: list/search, register, get one patient, patch contact/insurance fields.
+
 
 def serialize(row):
+    # Needed because MySQL returns date objects that jsonify can't serialize as-is.
     if row is None:
         return None
     return {k: (v.isoformat() if hasattr(v, 'isoformat') else v) for k, v in row.items()}

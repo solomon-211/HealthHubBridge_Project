@@ -1,8 +1,12 @@
+/* Shared JS for the clinic app: API base URL, auth helpers, and UI utilities
+   included from most HTML pages under /frontend. */
+
 const API_BASE_URL =
   window.location.protocol.startsWith('http') && window.location.hostname
-    ? `${window.location.protocol}//${window.location.hostname}:5000`
-    : 'http://localhost:5000';
+    ? `${window.location.protocol}//${window.location.hostname}:5001`
+    : 'http://localhost:5001';
 
+// Send users without a role cookie back to login (pages call this at startup).
 function authGuard() {
   if (!sessionStorage.getItem('role')) {
     window.location.href = '/auth/login.html';
@@ -13,6 +17,7 @@ function checkRole(allowedRoles) {
   return allowedRoles.includes(sessionStorage.getItem('role'));
 }
 
+// Uses data-role on nav items to hide links the current user shouldn't see.
 function applyRoleVisibility() {
   const currentRole = sessionStorage.getItem('role');
   document.querySelectorAll('[data-role]').forEach(element => {
@@ -38,6 +43,7 @@ function logout() {
   window.location.href = '/auth/login.html';
 }
 
+// Wraps fetch() against Flask: sends cookies, parses JSON or plain errors, shows toasts.
 async function apiFetch(endpoint, options = {}) {
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
@@ -219,6 +225,7 @@ function getPrescriptionStatus(endTime) {
   return new Date(endTime) > new Date() ? 'Active' : 'Expired';
 }
 
+// Used for search boxes so we don't hit the API on every keypress.
 function debounce(func, delay = 300) {
   let timer;
   return (...args) => {
@@ -255,6 +262,7 @@ function renderPagination(containerId, totalPages, currentPage, onPageChange) {
   container.innerHTML = html;
 }
 
+// Returns HTML for the left nav; activePage marks which link is highlighted.
 function renderSidebar(activePage) {
   const isActive = (page) => activePage === page ? 'active' : '';
   return `
@@ -286,6 +294,7 @@ function renderSidebar(activePage) {
 }
 
 function renderHeader() {
+  // Top bar: logo + logged-in user + logout (uses sessionStorage set at login).
   const username = sessionStorage.getItem('name') || '';
   const role = sessionStorage.getItem('role') || '';
 

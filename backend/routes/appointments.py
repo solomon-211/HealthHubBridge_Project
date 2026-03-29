@@ -7,6 +7,7 @@ from datetime import datetime, date
 appointments_bp = Blueprint('appointments', __name__)
 
 
+# List and filter appointments; results cached briefly to ease load on busy days.
 @appointments_bp.route('/appointments', methods=['GET'])
 @login_required
 def get_appointments():
@@ -125,6 +126,8 @@ def get_upcoming_appointments():
 @appointments_bp.route('/appointments', methods=['POST'])
 @login_required
 def book_appointment():
+    # Rules: past times rejected, doctor must have a schedule row for that weekday,
+    # and we block double-booking within 30 minutes on the same doctor.
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
