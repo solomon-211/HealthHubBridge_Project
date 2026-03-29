@@ -33,7 +33,7 @@ Community clinics in South Sudan operate in a resource-constrained environment c
 ## 2. Team Members
 
 | Name | Role |
-|---|---|---|
+|---|---|
 | **Belyse Intwaza** | Project Manager/Frontend Developer 
 | **Solomon Leek** | Frontend Developer 
 | **Toluwani Oladeji** | Backend Developer
