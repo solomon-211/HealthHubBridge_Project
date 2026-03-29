@@ -3,8 +3,8 @@
 
 const API_BASE_URL =
   window.location.protocol.startsWith('http') && window.location.hostname
-    ? `${window.location.protocol}//${window.location.hostname}:5001`
-    : 'http://localhost:5001';
+    ? `${window.location.protocol}//${window.location.hostname}:5000`
+    : 'http://localhost:5000';
 
 // Send users without a role cookie back to login (pages call this at startup).
 function authGuard() {
