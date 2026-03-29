@@ -3,7 +3,7 @@ from config import get_db_connection
 from cache import cache_get, cache_set, cache_invalidate
 from routes.auth import login_required, role_required
 
-medical_visits_bp = Blueprint('medical_visits', _name_)
+medical_visits_bp = Blueprint('medical_visits', __name__)
 
 
 # route to get all medical visits for a patient, with attached diagnoses and prescriptions

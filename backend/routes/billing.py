@@ -3,7 +3,7 @@ from config import get_db_connection
 from cache import cache_get, cache_set, cache_invalidate
 from routes.auth import login_required, role_required
 
-billing_bp = Blueprint('billing', _name_)
+billing_bp = Blueprint('billing', __name__)
 
 
 # route to get all billable services offered by the clinic

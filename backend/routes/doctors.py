@@ -3,7 +3,7 @@ from config import get_db_connection
 from cache import cache_get, cache_set
 from routes.auth import login_required
 
-doctors_bp = Blueprint('doctors', _name_)
+doctors_bp = Blueprint('doctors', __name__)
 
 
 # route to get all active doctors
