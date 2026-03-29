@@ -921,6 +921,12 @@ footer {
 }
 .btn-secondary:hover { background: #e2e8f0; }
 
+.btn-warning {
+  background: #D97706;
+  color: white;
+}
+.btn-warning:hover { background: #B45309; }
+
 .btn-small { padding: 4px 10px; font-size: 12px; }
 
 /* Status badge variants used by billing */
