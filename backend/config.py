@@ -1,5 +1,22 @@
 import os
 
+def _load_env():
+    env_path = os.path.join(os.path.dirname(os.path.abspath(_file_)), '.env')
+    if not os.path.exists(env_path):
+        return
+    with open(env_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            if key not in os.environ:
+                os.environ[key] = value
+
+_load_env()
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'healthbridge-dev-secret-key')
 
@@ -27,4 +44,3 @@ def get_db_connection():
         connect_timeout = 10       # fail fast on bad network instead of hanging
     )
     return conn
-
