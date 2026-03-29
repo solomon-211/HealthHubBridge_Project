@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-The **Community Clinic Management System (CCMS)**, developed under the group name **HealthHub Bridge** — is a full-stack web application that digitises the daily operations of small community clinics. The system was designed specifically for clinics in South Sudan, where most facilities still rely on paper-based records, manual appointment books, and handwritten prescriptions.
+The **Community Clinic Management System (CCMS)**, developed under the group name **HealthHub Bridge**, is a full-stack web application that digitises the daily operations of small community clinics. The system was designed specifically for clinics in South Sudan, where most facilities still rely on paper-based records, manual appointment books, and handwritten prescriptions.
 
 ### Problem Being Solved
 
@@ -32,7 +32,7 @@ Community clinics in South Sudan operate in a resource-constrained environment c
 
 ## 2. Team Members
 
-| Name | Role | Responsibilities |
+| Name | Role |
 |---|---|---|
 | **Belyse Intwaza** | Project Manager/Frontend Developer 
 | **Solomon Leek** | Frontend Developer 
