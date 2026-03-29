@@ -21,7 +21,7 @@ async function loadPatients(searchQuery = '', bustCache = false) {
   try {
     let endpoint = '/api/patients';
     if (searchQuery) endpoint += `?search=${encodeURIComponent(searchQuery)}`;
-    if (bustCache) await idbCache.invalidate('/api/patients').catch(() => {});
+
     const response = await apiFetch(endpoint);
     allPatients = response.patients || [];
     filteredPatients = allPatients;

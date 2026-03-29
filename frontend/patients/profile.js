@@ -330,12 +330,6 @@ async function submitInvoice() {
     });
     closeInvoiceModal();
     showToast('Invoice created', 'success');
-    // Explicitly clear stale idbCache entries before reloading
-    await Promise.all([
-      idbCache.invalidate(`/api/medical-visits/${patientId}`),
-      idbCache.invalidate(`/api/invoices`),
-      idbCache.invalidate(`/api/patients`)
-    ]).catch(() => {});
     loadVisits();
     loadBilling();
   } catch (e) {
