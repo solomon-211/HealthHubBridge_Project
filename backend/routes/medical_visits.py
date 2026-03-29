@@ -3,7 +3,7 @@ from config import get_db_connection
 from cache import cache_get, cache_set, cache_invalidate
 from routes.auth import login_required, role_required
 
-medical_visits_bp = Blueprint('medical_visits', __name__)
+medical_visits_bp = Blueprint('medical_visits', _name_)
 
 
 # route to get all medical visits for a patient, with attached diagnoses and prescriptions
@@ -23,9 +23,12 @@ def get_patient_visits(patient_id):
         # Fetch all visits for this patient
         cursor.execute("""
             SELECT v.visit_id, v.visit_date, v.notes,
-                   d.full_name AS doctor_name
+                   d.full_name AS doctor_name,
+                   CASE WHEN i.invoice_id IS NOT NULL THEN 1 ELSE 0 END AS has_invoice,
+                   i.invoice_id AS linked_invoice_id
             FROM medical_visits v
             JOIN doctors d ON v.doctor_id = d.doctor_id
+            LEFT JOIN invoices i ON i.visit_id = v.visit_id
             WHERE v.patient_id = %s
             ORDER BY v.visit_date DESC
         """, (patient_id,))
