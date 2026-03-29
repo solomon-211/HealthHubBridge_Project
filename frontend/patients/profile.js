@@ -75,6 +75,17 @@ async function loadPatient() {
   }
 }
 
+// Decide what to show in the invoice column of the visits table
+function renderVisitInvoiceCell(visit, role) {
+  if (Number(visit.has_invoice) === 1) {
+    return `<a href="/billing/invoice.html?id=${visit.linked_invoice_id}" class="btn btn-outline btn-sm">View Invoice</a>`;
+  }
+  if (role === 'admin' || role === 'receptionist') {
+    return `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${visit.visit_id}, ${JSON.stringify(visit).replace(/"/g,'&quot;')})">Generate Invoice</button>`;
+  }
+  return '<span style="font-size:12px;color:var(--text-muted);">Pending Invoice</span>';
+}
+
 // Load the patient's medical visit history with diagnoses attached
 async function loadVisits() {
   try {
@@ -91,9 +102,7 @@ async function loadVisits() {
           <td>${v.doctor_name ?? '—'}</td>
           <td style="font-size:12px;">${(v.diagnoses ?? []).map(diagChip).join('') || '—'}</td>
           <td style="font-size:12px;color:var(--text-muted);max-width:260px;">${v.notes ?? '—'}</td>
-          <td>${(role === 'admin' || role === 'receptionist')
-            ? `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${v.visit_id}, ${JSON.stringify(v).replace(/"/g,'&quot;')})">Invoice</button>`
-            : ''}</td>
+          <td>${renderVisitInvoiceCell(v, role)}</td>
         </tr>`).join('');
     }
   } catch (e) {
@@ -317,11 +326,18 @@ async function submitInvoice() {
   try {
     const res = await apiFetch('/api/invoices', {
       method: 'POST',
-      body: JSON.stringify({ patient_id: parseInt(patientId), items, discount })
+      body: JSON.stringify({ patient_id: parseInt(patientId), visit_id: invoiceVisitId, items, discount })
     });
     closeInvoiceModal();
     showToast('Invoice created', 'success');
-    location.href = `/billing/invoice.html?id=${res.invoice_id}`;
+    // Explicitly clear stale idbCache entries before reloading
+    await Promise.all([
+      idbCache.invalidate(`/api/medical-visits/${patientId}`),
+      idbCache.invalidate(`/api/invoices`),
+      idbCache.invalidate(`/api/patients`)
+    ]).catch(() => {});
+    loadVisits();
+    loadBilling();
   } catch (e) {
     showToast(e.message || 'Failed to create invoice', 'error');
   }
@@ -333,6 +349,3 @@ loadVisits();
 loadPrescriptions();
 loadAppointments();
 loadBilling();
-
-// If the URL has ?edit=true, open the edit modal automatically
-if (params.get('edit') === 'true') setTimeout(openEditModal, 500);

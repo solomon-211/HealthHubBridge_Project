@@ -16,11 +16,12 @@ let currentPage = 1;
 const perPage = 10;
 
 // Fetch patients from the backend, optionally filtered by a search query
-async function loadPatients(searchQuery = '') {
+async function loadPatients(searchQuery = '', bustCache = false) {
   const container = document.getElementById('patients-list');
   try {
     let endpoint = '/api/patients';
     if (searchQuery) endpoint += `?search=${encodeURIComponent(searchQuery)}`;
+    if (bustCache) await idbCache.invalidate('/api/patients').catch(() => {});
     const response = await apiFetch(endpoint);
     allPatients = response.patients || [];
     filteredPatients = allPatients;
@@ -70,8 +71,17 @@ function renderTable() {
       </thead>
       <tbody>`;
 
+  const isAdminOrRec = ['admin', 'receptionist'].includes(currentRole);
+
   paginated.items.forEach(patient => {
-    const patientId = patient.patient_id || patient.id;
+    const patientId    = patient.patient_id || patient.id;
+    const needsInvoice = isAdminOrRec && (patient.pending_invoice_count || 0) > 0;
+    const hasInvoiced  = isAdminOrRec && (patient.invoiced_count || 0) > 0;
+    const invoiceBtn   = needsInvoice
+      ? `<button class="btn btn-small btn-warning" onclick="goToInvoice('${patientId}')">Needs Invoice</button>`
+      : hasInvoiced
+        ? `<button class="btn btn-small btn-success" onclick="goToInvoice('${patientId}')">Invoiced</button>`
+        : '';
     html += `
       <tr>
         <td><strong>${patient.clinic_number}</strong></td>
@@ -84,7 +94,7 @@ function renderTable() {
         <td>
           <div class="action-buttons">
             <button class="btn btn-small btn-primary" onclick="viewProfile('${patientId}')">View</button>
-            ${['admin','receptionist'].includes(currentRole) ? `<button class="btn btn-small btn-secondary" onclick="editPatient('${patientId}')">Edit</button>` : ''}
+            ${invoiceBtn}
           </div>
         </td>
       </tr>`;
@@ -115,7 +125,7 @@ function nextPage() {
 
 // Navigate to the patient's full profile page
 function viewProfile(patientId) { location.href = `/patients/profile.html?id=${patientId}`; }
-function editPatient(patientId) { showToast('Edit feature coming soon', 'info'); }
+function goToInvoice(patientId) { location.href = `/patients/profile.html?id=${patientId}#billing`; }
 
 // Sort the patient list by a given column when the user clicks a table header
 function sortTable(column) {
@@ -159,4 +169,4 @@ if (registerBtn && !['admin', 'receptionist'].includes(currentRole)) {
   registerBtn.style.display = 'none';
 }
 
-loadPatients();
+loadPatients('', true);
