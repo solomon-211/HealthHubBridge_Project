@@ -3,7 +3,7 @@ from config import get_db_connection
 from cache import cache_get, cache_set
 from routes.auth import login_required
 
-doctors_bp = Blueprint('doctors', __name__)
+doctors_bp = Blueprint('doctors', _name_)
 
 
 # route to get all active doctors
@@ -55,6 +55,11 @@ def get_all_schedules():
         conn.close()
     except Exception as e:
         return jsonify({'error': 'Could not retrieve schedules.', 'details': str(e)}), 503
+
+    for s in schedules:
+        if hasattr(s.get('start_time'), 'seconds'):
+            total = int(s['start_time'].total_seconds())
+            s['start_time'] = f"{total // 3600:02d}:{(total % 3600) // 60:02d}"
 
     cache_set('doctor-schedules:all', schedules, ttl=300)
     return jsonify({'schedules': schedules, 'source': 'db'}), 200

@@ -3,7 +3,7 @@ from config import get_db_connection
 from cache import cache_get, cache_set, cache_invalidate
 from routes.auth import login_required, role_required
 
-billing_bp = Blueprint('billing', __name__)
+billing_bp = Blueprint('billing', _name_)
 
 
 # route to get all billable services offered by the clinic
@@ -171,12 +171,13 @@ def create_invoice():
         # Insert the invoice header
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO invoices (patient_id, appointment_id, invoice_date,
+            INSERT INTO invoices (patient_id, appointment_id, visit_id, invoice_date,
                                   total_amount, discount, amount_due, payment_status)
-            VALUES (%s, %s, CURDATE(), %s, %s, %s, 'Unpaid')
+            VALUES (%s, %s, %s, CURDATE(), %s, %s, %s, 'Unpaid')
         """, (
             data['patient_id'],
             data.get('appointment_id'),
+            data.get('visit_id'),
             total, discount, amount_due
         ))
         invoice_id = cursor.lastrowid
@@ -193,6 +194,8 @@ def create_invoice():
         return jsonify({'error': 'Could not create invoice.', 'details': str(e)}), 503
 
     cache_invalidate('invoices')
+    cache_invalidate('medical-visits')
+    cache_invalidate('patients')
     return jsonify({'invoice_id': invoice_id, 'total': total, 'amount_due': amount_due}), 201
 
 
