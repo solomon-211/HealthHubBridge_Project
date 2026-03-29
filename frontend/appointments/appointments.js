@@ -6,7 +6,6 @@ document.getElementById('header-slot').outerHTML = renderHeader();
 document.getElementById('sidebar-slot').outerHTML = renderSidebar('appointments');
 applyRoleVisibility();
 
-// Shared page state for list, booking wizard, and calendar views.
 const role = sessionStorage.getItem('role');
 let allAppointments = [];
 let filteredAppointments = [];
@@ -14,7 +13,7 @@ let allDoctors = [];
 let currentPage = 1;
 const perPage = 10;
 let currentWeekOffset = 0;
-let knownStatuses = {};   // appointment_id → last known status
+let knownStatuses = {};
 
 const doctorColors = ['#DBEAFE', '#DCFCE7', '#FEF3C7', '#FCE7F3', '#EDE9FE'];
 
@@ -23,14 +22,12 @@ async function loadAppointments() {
     const data = await apiFetch('/api/appointments');
     const incoming = data?.appointments ?? [];
 
-    // Find IDs that just flipped to Completed since last load
     const newlyCompleted = new Set(
       incoming
         .filter(a => a.status === 'Completed' && knownStatuses[a.appointment_id] === 'Scheduled')
         .map(a => a.appointment_id)
     );
 
-    // Update known statuses
     incoming.forEach(a => { knownStatuses[a.appointment_id] = a.status; });
 
     allAppointments = incoming;
@@ -38,12 +35,10 @@ async function loadAppointments() {
     currentPage = 1;
     renderTable();
 
-    // Flash rows that just completed (visible to admin/receptionist)
     if (newlyCompleted.size > 0 && role !== 'doctor') {
       newlyCompleted.forEach(id => {
         const rows = document.querySelectorAll('#appointments-tbody tr');
         rows.forEach(row => {
-          // match by appointment_id embedded in the View button onclick
           if (row.innerHTML.includes(`openViewModal(${id})`)) {
             row.classList.add('row-just-completed');
             setTimeout(() => row.classList.remove('row-just-completed'), 2100);

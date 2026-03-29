@@ -1,18 +1,14 @@
-// Make sure the user is logged in before viewing a patient profile
 authGuard();
 checkSessionTimeout();
 
-// Inject the shared header and sidebar
 document.getElementById('header-slot').outerHTML = renderHeader();
 document.getElementById('sidebar-slot').outerHTML = renderSidebar('patients');
 applyRoleVisibility();
 
-// Get the patient ID from the URL — redirect away if it's missing
 const params    = new URLSearchParams(window.location.search);
 const patientId = params.get('id');
 if (!patientId) location.href = '/patients/list.html';
 
-// These hold the data loaded from each tab so we can reuse it without re-fetching
 let patientData       = null;
 let visitsData        = [];
 let prescriptionsData = [];
@@ -20,7 +16,6 @@ let appointmentsData  = [];
 let billingData       = [];
 let allServices       = [];
 
-// Build a single label/value row for the info panels
 function infoRow(label, value) {
   return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
     <span style="color:var(--text-muted);">${label}</span>
@@ -28,12 +23,10 @@ function infoRow(label, value) {
   </div>`;
 }
 
-// Render a diagnosis as a small pill/chip
 function diagChip(text) {
   return `<span style="display:inline-flex;padding:3px 8px;border-radius:999px;background:#E0F2FE;color:#0F172A;font-size:11px;margin:0 4px 4px 0;">${text}</span>`;
 }
 
-// Update the summary stat cards at the top of the profile page
 function renderPatientSummary() {
   const el = document.getElementById('patient-summary');
   if (!el) return;
@@ -49,7 +42,6 @@ function renderPatientSummary() {
   ].join('');
 }
 
-// Load the patient's personal and medical info
 async function loadPatient() {
   try {
     const data = await apiFetch(`/api/patients/${patientId}`);
@@ -75,7 +67,16 @@ async function loadPatient() {
   }
 }
 
-// Load the patient's medical visit history with diagnoses attached
+function renderVisitInvoiceCell(visit, role) {
+  if (Number(visit.has_invoice) === 1) {
+    return `<a href="/billing/invoice.html?id=${visit.linked_invoice_id}" class="btn btn-outline btn-sm">View Invoice</a>`;
+  }
+  if (role === 'admin' || role === 'receptionist') {
+    return `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${visit.visit_id}, ${JSON.stringify(visit).replace(/"/g,'&quot;')})">Generate Invoice</button>`;
+  }
+  return '<span style="font-size:12px;color:var(--text-muted);">Pending Invoice</span>';
+}
+
 async function loadVisits() {
   try {
     const data = await apiFetch(`/api/medical-visits/${patientId}`);
@@ -91,9 +92,7 @@ async function loadVisits() {
           <td>${v.doctor_name ?? '—'}</td>
           <td style="font-size:12px;">${(v.diagnoses ?? []).map(diagChip).join('') || '—'}</td>
           <td style="font-size:12px;color:var(--text-muted);max-width:260px;">${v.notes ?? '—'}</td>
-          <td>${(role === 'admin' || role === 'receptionist')
-            ? `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${v.visit_id}, ${JSON.stringify(v).replace(/"/g,'&quot;')})">Invoice</button>`
-            : ''}</td>
+          <td>${renderVisitInvoiceCell(v, role)}</td>
         </tr>`).join('');
     }
   } catch (e) {
@@ -104,7 +103,6 @@ async function loadVisits() {
   renderPatientSummary();
 }
 
-// Load prescriptions using GET /api/prescriptions/:patient_id
 async function loadPrescriptions() {
   try {
     const data = await apiFetch(`/api/prescriptions/${patientId}`);
@@ -130,7 +128,6 @@ async function loadPrescriptions() {
   renderPatientSummary();
 }
 
-// Load all appointments for this patient
 async function loadAppointments() {
   try {
     const data = await apiFetch(`/api/appointments?patient_id=${patientId}`);
@@ -155,7 +152,6 @@ async function loadAppointments() {
   renderPatientSummary();
 }
 
-// Load all invoices for this patient
 async function loadBilling() {
   try {
     const data = await apiFetch(`/api/invoices?patient_id=${patientId}`);
@@ -182,7 +178,6 @@ async function loadBilling() {
   renderPatientSummary();
 }
 
-// Switch between the profile tabs (visits, prescriptions, appointments, billing)
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -190,7 +185,6 @@ function switchTab(tab, btn) {
   document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
-// Open the edit modal and pre-fill it with the current patient data
 function openEditModal() {
   if (!patientData) return;
   const p = patientData;
@@ -205,7 +199,6 @@ function openEditModal() {
 
 function closeEditModal() { hideModal('edit-modal'); }
 
-// Save the updated patient fields — only the allowed fields are sent to the backend
 async function savePatient() {
   const updates = {
     phone:              document.getElementById('edit-phone').value.trim(),
@@ -225,10 +218,8 @@ async function savePatient() {
   }
 }
 
-// Track which visit the invoice modal was opened for
 let invoiceVisitId = null;
 
-// Open the create invoice modal for a specific visit
 async function openInvoiceModal(visitId, visitObj) {
   invoiceVisitId = visitId;
   document.getElementById('inv-items-tbody').innerHTML = '';
@@ -239,7 +230,6 @@ async function openInvoiceModal(visitId, visitObj) {
   document.getElementById('inv-diagnoses').textContent  = visitObj?.diagnoses?.length ? visitObj.diagnoses.join('; ') : '—';
   showModal('invoice-modal');
 
-  // Load the services catalogue if we haven't already
   if (!allServices.length) {
     try {
       const res = await apiFetch('/api/services');
@@ -254,7 +244,6 @@ function closeInvoiceModal() {
   invoiceVisitId = null;
 }
 
-// Add a new service line item row to the invoice form
 function addInvoiceRow() {
   const tbody = document.getElementById('inv-items-tbody');
   const tr    = document.createElement('tr');
@@ -282,7 +271,6 @@ function addInvoiceRow() {
   tbody.appendChild(tr);
 }
 
-// When a service is selected, auto-fill the unit price from the catalogue
 function pickInvService(select) {
   const opt = select.options[select.selectedIndex];
   const row = select.closest('tr');
@@ -290,7 +278,6 @@ function pickInvService(select) {
   updateInvTotal();
 }
 
-// Recalculate the invoice total whenever a quantity or service changes
 function updateInvTotal() {
   let subtotal = 0;
   document.querySelectorAll('#inv-items-tbody tr').forEach(tr => {
@@ -301,7 +288,6 @@ function updateInvTotal() {
   document.getElementById('inv-total').textContent = `SSP ${Math.max(0, subtotal - discount).toFixed(2)}`;
 }
 
-// Submit the invoice to the backend — items use service_id, not service names
 async function submitInvoice() {
   const items = [];
   document.querySelectorAll('#inv-items-tbody tr').forEach(tr => {
@@ -317,22 +303,24 @@ async function submitInvoice() {
   try {
     const res = await apiFetch('/api/invoices', {
       method: 'POST',
-      body: JSON.stringify({ patient_id: parseInt(patientId), items, discount })
+      body: JSON.stringify({ patient_id: parseInt(patientId), visit_id: invoiceVisitId, items, discount })
     });
     closeInvoiceModal();
     showToast('Invoice created', 'success');
-    location.href = `/billing/invoice.html?id=${res.invoice_id}`;
+    await Promise.all([
+      idbCache.invalidate(`/api/medical-visits/${patientId}`),
+      idbCache.invalidate(`/api/invoices`),
+      idbCache.invalidate(`/api/patients`)
+    ]).catch(() => {});
+    loadVisits();
+    loadBilling();
   } catch (e) {
     showToast(e.message || 'Failed to create invoice', 'error');
   }
 }
 
-// Load all sections when the page opens
 loadPatient();
 loadVisits();
 loadPrescriptions();
 loadAppointments();
 loadBilling();
-
-// If the URL has ?edit=true, open the edit modal automatically
-if (params.get('edit') === 'true') setTimeout(openEditModal, 500);

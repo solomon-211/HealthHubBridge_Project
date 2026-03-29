@@ -6,11 +6,9 @@ from routes.auth import login_required, role_required
 medical_visits_bp = Blueprint('medical_visits', __name__)
 
 
-# route to get all medical visits for a patient, with attached diagnoses and prescriptions
 @medical_visits_bp.route('/medical-visits/<int:patient_id>', methods=['GET'])
 @login_required
 def get_patient_visits(patient_id):
-    """Returns all visits for a patient, newest first, with diagnoses attached."""
     cache_key = f'medical-visits:{patient_id}'
     cached = cache_get(cache_key)
     if cached:
@@ -20,7 +18,6 @@ def get_patient_visits(patient_id):
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Fetch all visits for this patient
         cursor.execute("""
             SELECT v.visit_id, v.visit_date, v.notes,
                    d.full_name AS doctor_name
@@ -31,8 +28,6 @@ def get_patient_visits(patient_id):
         """, (patient_id,))
         visits = cursor.fetchall()
 
-        # For each visit, attach its diagnoses and prescriptions
-        # This avoids extra round-trips from the frontend
         for visit in visits:
             cursor.execute("""
                 SELECT description FROM diagnoses WHERE visit_id = %s
@@ -52,9 +47,8 @@ def get_patient_visits(patient_id):
     return jsonify({'visits': visits, 'source': 'db'}), 200
 
 
-# route to add a new medical visit record (e.g. when a patient is seen by a doctor)
 @medical_visits_bp.route('/medical-visits', methods=['POST'])
-@role_required('doctor', 'admin')   # only doctors or admins can create visit records
+@role_required('doctor', 'admin')
 def add_visit():
     data = request.get_json()
     if not data:
@@ -74,7 +68,7 @@ def add_visit():
         """, (
             data['patient_id'],
             data['doctor_id'],
-            data.get('appointment_id'),  # nullable — walk-ins won't have this
+            data.get('appointment_id'),
             data['visit_date'],
             data.get('notes', '')
         ))
@@ -88,7 +82,6 @@ def add_visit():
     return jsonify({'visit_id': visit_id, 'message': 'Visit recorded'}), 201
 
 
-# route to get diagnoses for a specific visit (for detailed view)
 @medical_visits_bp.route('/diagnoses/<int:visit_id>', methods=['GET'])
 @login_required
 def get_diagnoses(visit_id):
@@ -104,7 +97,6 @@ def get_diagnoses(visit_id):
     return jsonify({'diagnoses': diagnoses}), 200
 
 
-# route to add a diagnosis to a visit (e.g. after the doctor has made an assessment)
 @medical_visits_bp.route('/diagnoses', methods=['POST'])
 @role_required('doctor', 'admin')
 def add_diagnosis():
@@ -128,7 +120,6 @@ def add_diagnosis():
     return jsonify({'diagnosis_id': new_id}), 201
 
 
-# route to get all prescriptions for a patient (for the prescriptions tab in patient profile)
 @medical_visits_bp.route('/prescriptions/<int:patient_id>', methods=['GET'])
 @login_required
 def get_prescriptions(patient_id):
@@ -157,7 +148,6 @@ def get_prescriptions(patient_id):
     return jsonify({'prescriptions': prescriptions, 'source': 'db'}), 200
 
 
-# route to add a new prescription for a visit (e.g. when the doctor prescribes medication during the consultation)
 @medical_visits_bp.route('/prescriptions', methods=['POST'])
 @role_required('doctor', 'admin')
 def add_prescription():
@@ -189,6 +179,5 @@ def add_prescription():
     except Exception as e:
         return jsonify({'error': 'Could not save prescription.', 'details': str(e)}), 503
 
-    # Clear the patient's prescription cache
     cache_invalidate(f'prescriptions:')
     return jsonify({'prescription_id': new_id}), 201

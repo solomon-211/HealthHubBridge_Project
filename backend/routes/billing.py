@@ -6,11 +6,9 @@ from routes.auth import login_required, role_required
 billing_bp = Blueprint('billing', __name__)
 
 
-# route to get all billable services offered by the clinic
 @billing_bp.route('/services', methods=['GET'])
 @login_required
 def get_services():
-    """Returns the clinic's full catalogue of billable services."""
     cached = cache_get('services:all')
     if cached:
         return jsonify({'services': cached, 'source': 'cache'}), 200
@@ -28,15 +26,13 @@ def get_services():
     except Exception as e:
         return jsonify({'error': 'Could not retrieve services.', 'details': str(e)}), 503
 
-    cache_set('services:all', services, ttl=600)  # services rarely change — 10 min cache
+    cache_set('services:all', services, ttl=600)
     return jsonify({'services': services, 'source': 'db'}), 200
 
 
-# route to list invoices, with optional filters for patient or payment status
 @billing_bp.route('/invoices', methods=['GET'])
 @login_required
 def get_invoices():
-    """List invoices. Optional filters: ?patient_id=1&status=Unpaid"""
     patient_id = request.args.get('patient_id')
     status     = request.args.get('status')
 
@@ -77,11 +73,9 @@ def get_invoices():
     return jsonify({'invoices': invoices, 'source': 'db'}), 200
 
 
-# route to get a single invoice with line-item details
 @billing_bp.route('/invoices/<int:invoice_id>', methods=['GET'])
 @login_required
 def get_invoice(invoice_id):
-    """Returns an invoice with its full line-item breakdown."""
     cache_key = f'invoices:detail:{invoice_id}'
     cached = cache_get(cache_key)
     if cached:
@@ -103,7 +97,6 @@ def get_invoice(invoice_id):
             conn.close()
             return jsonify({'error': 'Invoice not found'}), 404
 
-        # Attach the line items
         cursor.execute("""
             SELECT ii.quantity, ii.unit_price, ii.subtotal,
                    s.service_name, s.category
@@ -120,23 +113,9 @@ def get_invoice(invoice_id):
     return jsonify({'invoice': invoice, 'source': 'db'}), 200
 
 
-# route to create a new invoice with line items in one request
 @billing_bp.route('/invoices', methods=['POST'])
 @role_required('admin', 'receptionist')
 def create_invoice():
-    """
-    Creates an invoice and its line items in one request.
-    Expected body:
-    {
-        "patient_id": 1,
-        "appointment_id": 3,          (optional)
-        "discount": 1000,             (optional, default 0)
-        "items": [
-            { "service_id": 1, "quantity": 1 },
-            { "service_id": 2, "quantity": 2 }
-        ]
-    }
-    """
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -149,7 +128,6 @@ def create_invoice():
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Look up the unit price for each service_id from the services table
         total = 0.0
         line_items = []
         for item in data['items']:
@@ -168,7 +146,6 @@ def create_invoice():
         discount   = float(data.get('discount', 0))
         amount_due = total - discount
 
-        # Insert the invoice header
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO invoices (patient_id, appointment_id, invoice_date,
@@ -181,7 +158,6 @@ def create_invoice():
         ))
         invoice_id = cursor.lastrowid
 
-        # Insert each line item
         cursor.executemany("""
             INSERT INTO invoice_items (invoice_id, service_id, quantity, unit_price, subtotal)
             VALUES (%s, %s, %s, %s, %s)
@@ -196,7 +172,6 @@ def create_invoice():
     return jsonify({'invoice_id': invoice_id, 'total': total, 'amount_due': amount_due}), 201
 
 
-# route to record a payment against an invoice
 @billing_bp.route('/payments', methods=['POST'])
 @role_required('admin', 'receptionist')
 def record_payment():
@@ -213,7 +188,6 @@ def record_payment():
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Check the invoice exists and get current balance
         cursor.execute("""
             SELECT amount_due, payment_status,
                    COALESCE(SUM(p.amount_paid), 0) AS already_paid
@@ -232,7 +206,6 @@ def record_payment():
             conn.close()
             return jsonify({'error': 'This invoice is already fully paid'}), 409
 
-        # Record the payment
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO payments (invoice_id, payment_date, amount_paid, payment_method, reference_no, received_by)
@@ -246,7 +219,6 @@ def record_payment():
             data.get('received_by', '')
         ))
 
-        # Recalculate and update payment_status on the invoice
         total_paid = float(invoice['already_paid']) + float(data['amount_paid'])
         if total_paid >= float(invoice['amount_due']):
             new_status = 'Paid'

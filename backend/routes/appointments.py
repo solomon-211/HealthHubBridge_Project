@@ -7,11 +7,9 @@ from datetime import datetime, date
 appointments_bp = Blueprint('appointments', __name__)
 
 
-# route to get appointments, with optional filters for doctor, status, or date
 @appointments_bp.route('/appointments', methods=['GET'])
 @login_required
 def get_appointments():
-    # Optional filters from query string: ?doctor_id=1&status=Scheduled&date=2025-06-10
     doctor_id = request.args.get('doctor_id')
     status    = request.args.get('status')
     appt_date = request.args.get('date')
@@ -21,7 +19,6 @@ def get_appointments():
     if cached:
         return jsonify({'appointments': cached, 'source': 'cache'}), 200
 
-    # Build the query dynamically based on which filters were provided
     query  = """
         SELECT a.appointment_id, a.appointment_datetime, a.reason, a.status,
                a.patient_id, a.doctor_id,
@@ -59,7 +56,6 @@ def get_appointments():
     return jsonify({'appointments': appointments, 'source': 'db'}), 200
 
 
-# route to get a summary of appointments for the past week (for admin dashboard)
 @appointments_bp.route('/appointments/week-summary', methods=['GET'])
 @login_required
 def week_summary():
@@ -71,7 +67,6 @@ def week_summary():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        # Count appointments grouped by day for the current 7-day window
         cursor.execute("""
             SELECT DATE(appointment_datetime) AS appt_date,
                    COUNT(*) AS total,
@@ -127,7 +122,6 @@ def get_upcoming_appointments():
     return jsonify({'appointments': appointments, 'source': 'db'}), 200
 
 
-# route to book a new appointment
 @appointments_bp.route('/appointments', methods=['POST'])
 @login_required
 def book_appointment():
@@ -140,23 +134,20 @@ def book_appointment():
     if missing:
         return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
 
-    # Parse and validate the datetime string from the request
     try:
         appt_dt = datetime.strptime(data['appointment_datetime'], '%Y-%m-%d %H:%M:%S')
     except ValueError:
         return jsonify({'error': 'Invalid datetime format. Use: YYYY-MM-DD HH:MM:SS'}), 400
 
-    # Appointments cannot be booked in the past
     if appt_dt < datetime.now():
         return jsonify({'error': 'Appointment datetime cannot be in the past'}), 400
 
-    day_name = appt_dt.strftime('%a')   # e.g. 'Mon', 'Tue' — matches ENUM in doctor_schedule
+    day_name = appt_dt.strftime('%a')
 
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Check the doctor actually works on this day
         cursor.execute("""
             SELECT schedule_id FROM doctor_schedule
             WHERE doctor_id = %s AND day_of_week = %s
@@ -167,21 +158,17 @@ def book_appointment():
                 'error': f"Doctor is not available on {appt_dt.strftime('%A')}s. "
                           "Please choose a different day."
             }), 409
-        
 
-
-        # 2. Check for a double-booking on the same slot (within 30 minutes)
         cursor.execute("""
             SELECT appointment_id FROM appointments
             WHERE doctor_id = %s
-              AND a.status    = 'Scheduled'
+              AND status = 'Scheduled'
               AND ABS(TIMESTAMPDIFF(MINUTE, appointment_datetime, %s)) < 30
         """, (data['doctor_id'], data['appointment_datetime']))
         if cursor.fetchone():
             conn.close()
             return jsonify({'error': 'This time slot is already booked. Please choose another time.'}), 409
 
-        # 3. All checks passed — insert the appointment
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO appointments (patient_id, doctor_id, appointment_datetime, reason, status)
@@ -204,7 +191,6 @@ def book_appointment():
 
 ALLOWED_TRANSITIONS = {'Scheduled': {'Completed', 'Cancelled', 'No-show'},}
 
-# route to update appointment status (e.g. mark as Completed, Cancelled, No-show)
 @appointments_bp.route('/appointments/<int:appointment_id>', methods=['PATCH'])
 @login_required
 def update_appointment_status(appointment_id):
@@ -219,7 +205,6 @@ def update_appointment_status(appointment_id):
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Fetch current status before updating
         cursor.execute(
             "SELECT status FROM appointments WHERE appointment_id = %s",
             (appointment_id,)
@@ -232,7 +217,6 @@ def update_appointment_status(appointment_id):
 
         current_status = row['status']
 
-        # Block transitions from terminal statuses
         if current_status not in ALLOWED_TRANSITIONS:
             conn.close()
             return jsonify({
@@ -240,7 +224,6 @@ def update_appointment_status(appointment_id):
                          f'Only Scheduled appointments can be updated.'
             }), 409
 
-        # Block invalid transitions from Scheduled
         if new_status not in ALLOWED_TRANSITIONS[current_status]:
             conn.close()
             return jsonify({

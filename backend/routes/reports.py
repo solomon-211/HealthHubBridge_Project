@@ -7,11 +7,9 @@ from datetime import date
 reports_bp = Blueprint('reports', __name__)
 
 
-# route to get dashboard stats for receptionists (total patients, today's appointments, revenue, etc.)
 @reports_bp.route('/dashboard/stats', methods=['GET'])
 @login_required
 def dashboard_stats():
-    # This endpoint aggregates key metrics for the dashboard. It uses caching to avoid heavy DB queries on every page load.
     today     = date.today().isoformat()
     cache_key = f'dashboard:stats:{today}'
     cached    = cache_get(cache_key)
@@ -22,11 +20,9 @@ def dashboard_stats():
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Total registered patients
         cursor.execute("SELECT COUNT(*) AS total FROM patients")
         total_patients = cursor.fetchone()['total']
 
-        # Today's appointments grouped by status
         cursor.execute("""
             SELECT status, COUNT(*) AS count
             FROM appointments
@@ -36,7 +32,6 @@ def dashboard_stats():
         appt_rows = cursor.fetchall()
         appointments_today = {row['status']: row['count'] for row in appt_rows}
 
-        # Revenue collected today
         cursor.execute("""
             SELECT COALESCE(SUM(amount_paid), 0) AS revenue
             FROM payments
@@ -44,7 +39,6 @@ def dashboard_stats():
         """)
         revenue_today = float(cursor.fetchone()['revenue'])
 
-        # Count of unpaid invoices (useful alert for reception)
         cursor.execute("""
             SELECT COUNT(*) AS count FROM invoices WHERE payment_status = 'Unpaid'
         """)
@@ -64,11 +58,9 @@ def dashboard_stats():
     return jsonify({'stats': stats, 'source': 'db'}), 200
 
 
-# route to get weekly analytics data for charts (appointments and revenue trends)
 @reports_bp.route('/analytics/weekly', methods=['GET'])
 @login_required
 def weekly_analytics():
-    """7-day trend: appointments and revenue per day for charts."""
     cache_key = f'analytics:weekly:{date.today().isoformat()}'
     cached    = cache_get(cache_key)
     if cached:
@@ -101,16 +93,10 @@ def weekly_analytics():
     return jsonify({'weekly': weekly, 'source': 'db'}), 200
 
 
-# route to get diagnoses for a specific visit (for detailed view)
 @reports_bp.route('/analytics/snapshots', methods=['GET'])
 @login_required
 def analytics_snapshots():
-    """
-    Reads from the analytics_snapshots table — pre-aggregated daily data.
-    Because the snapshots are computed once per day by a scheduled job,
-    this query is very fast even on weak hardware or slow connections.
-    """
-    limit     = min(int(request.args.get('limit', 30)), 90)  # cap at 90 days
+    limit     = min(int(request.args.get('limit', 30)), 90)
     cache_key = f'analytics:snapshots:{limit}'
     cached    = cache_get(cache_key)
     if cached:
@@ -135,14 +121,9 @@ def analytics_snapshots():
     return jsonify({'snapshots': snapshots, 'source': 'db'}), 200
 
 
-# route to get financial report for a date range (for admin dashboard)
 @reports_bp.route('/reports/financial', methods=['GET'])
 @role_required('admin')
 def financial_report():
-    """
-    Financial summary for a date range.
-    Usage: ?from=2025-06-01&to=2025-06-30
-    """
     date_from = request.args.get('from', date.today().replace(day=1).isoformat())
     date_to   = request.args.get('to',   date.today().isoformat())
 
@@ -150,7 +131,6 @@ def financial_report():
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Revenue collected in the period
         cursor.execute("""
             SELECT COALESCE(SUM(amount_paid), 0) AS total_collected
             FROM payments
@@ -158,7 +138,6 @@ def financial_report():
         """, (date_from, date_to))
         revenue = cursor.fetchone()
 
-        # Breakdown by payment method
         cursor.execute("""
             SELECT payment_method, SUM(amount_paid) AS total, COUNT(*) AS transactions
             FROM payments
@@ -167,7 +146,6 @@ def financial_report():
         """, (date_from, date_to))
         by_method = cursor.fetchall()
 
-        # Outstanding balances
         cursor.execute("""
             SELECT payment_status, COUNT(*) AS count, SUM(amount_due) AS total_owed
             FROM invoices
@@ -188,11 +166,9 @@ def financial_report():
     }), 200
 
 
-# route to get clinical report for a date range (for admin and doctors)
 @reports_bp.route('/reports/clinical', methods=['GET'])
 @role_required('admin', 'doctor')
 def clinical_report():
-    """Top diagnoses and visit volume for a date range."""
     date_from = request.args.get('from', date.today().replace(day=1).isoformat())
     date_to   = request.args.get('to',   date.today().isoformat())
 
@@ -228,11 +204,9 @@ def clinical_report():
     }), 200
 
 
-# route to get operational report for a date range (for admin and doctors)
 @reports_bp.route('/reports/operational', methods=['GET'])
 @role_required('admin')
 def operational_report():
-    #Appointment completion rates and average wait times for a date range.
     date_from = request.args.get('from', date.today().replace(day=1).isoformat())
     date_to   = request.args.get('to',   date.today().isoformat())
 

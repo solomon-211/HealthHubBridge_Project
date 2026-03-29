@@ -9,14 +9,12 @@ class Config:
     DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
     DB_NAME     = os.environ.get('DB_NAME',     'healthbridge_db')
 
-    
-    SESSION_LIFETIME = int(os.environ.get('SESSION_LIFETIME', 3600)) # 1 hour default. After this, users must log in again. Reduces risk of stolen sessions.
+    SESSION_LIFETIME = int(os.environ.get('SESSION_LIFETIME', 3600))
 
     CACHE_TTL = int(os.environ.get('CACHE_TTL', 30))
 
 
 def get_db_connection():
-    # create and return a new DB connection.
     import mysql.connector
     conn = mysql.connector.connect(
         host        = Config.DB_HOST,
@@ -24,7 +22,7 @@ def get_db_connection():
         user        = Config.DB_USER,
         password    = Config.DB_PASSWORD,
         database    = Config.DB_NAME,
-        connect_timeout = 10       # fail fast on bad network instead of hanging
+        connect_timeout = 10
     )
     return conn
 

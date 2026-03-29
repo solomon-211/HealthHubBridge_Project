@@ -1,26 +1,23 @@
-// Only allow admin, receptionist, and doctor roles on this page
 authGuard();
 checkRole(['receptionist', 'admin', 'doctor']) || (location.href = '/dashboard/index.html');
 
-// Inject the shared header and sidebar
 document.getElementById('header-slot').outerHTML = renderHeader();
 document.getElementById('sidebar-slot').outerHTML = renderSidebar('patients');
 applyRoleVisibility();
 
 const currentRole = sessionStorage.getItem('role') || 'Guest';
 
-// Keep the full patient list and the currently filtered/paginated view in memory
 let allPatients = [];
 let filteredPatients = [];
 let currentPage = 1;
 const perPage = 10;
 
-// Fetch patients from the backend, optionally filtered by a search query
-async function loadPatients(searchQuery = '') {
+async function loadPatients(searchQuery = '', bustCache = false) {
   const container = document.getElementById('patients-list');
   try {
     let endpoint = '/api/patients';
     if (searchQuery) endpoint += `?search=${encodeURIComponent(searchQuery)}`;
+    if (bustCache) await idbCache.invalidate('/api/patients').catch(() => {});
     const response = await apiFetch(endpoint);
     allPatients = response.patients || [];
     filteredPatients = allPatients;
@@ -37,7 +34,6 @@ async function loadPatients(searchQuery = '') {
   }
 }
 
-// Build and render the patients table for the current page
 function renderTable() {
   const container = document.getElementById('patients-list');
   if (!filteredPatients.length) {
@@ -70,8 +66,17 @@ function renderTable() {
       </thead>
       <tbody>`;
 
+  const isAdminOrRec = ['admin', 'receptionist'].includes(currentRole);
+
   paginated.items.forEach(patient => {
-    const patientId = patient.patient_id || patient.id;
+    const patientId    = patient.patient_id || patient.id;
+    const needsInvoice = isAdminOrRec && (patient.pending_invoice_count || 0) > 0;
+    const hasInvoiced  = isAdminOrRec && (patient.invoiced_count || 0) > 0;
+    const invoiceBtn   = needsInvoice
+      ? `<button class="btn btn-small btn-warning" onclick="goToInvoice('${patientId}')">Needs Invoice</button>`
+      : hasInvoiced
+        ? `<button class="btn btn-small btn-success" onclick="goToInvoice('${patientId}')">Invoiced</button>`
+        : '';
     html += `
       <tr>
         <td><strong>${patient.clinic_number}</strong></td>
@@ -84,7 +89,7 @@ function renderTable() {
         <td>
           <div class="action-buttons">
             <button class="btn btn-small btn-primary" onclick="viewProfile('${patientId}')">View</button>
-            ${['admin','receptionist'].includes(currentRole) ? `<button class="btn btn-small btn-secondary" onclick="editPatient('${patientId}')">Edit</button>` : ''}
+            ${invoiceBtn}
           </div>
         </td>
       </tr>`;
@@ -93,7 +98,6 @@ function renderTable() {
   html += `</tbody></table>`;
   container.innerHTML = html;
 
-  // Show or hide pagination controls depending on how many pages there are
   if (paginated.totalPages > 1) {
     document.getElementById('pagination-footer').style.display = 'flex';
     document.getElementById('pagination-info').textContent = `Page ${paginated.currentPage} of ${paginated.totalPages}`;
@@ -113,11 +117,9 @@ function nextPage() {
   if (currentPage < totalPages) { currentPage++; renderTable(); window.scrollTo(0, 0); }
 }
 
-// Navigate to the patient's full profile page
 function viewProfile(patientId) { location.href = `/patients/profile.html?id=${patientId}`; }
-function editPatient(patientId) { showToast('Edit feature coming soon', 'info'); }
+function goToInvoice(patientId) { location.href = `/patients/profile.html?id=${patientId}#billing`; }
 
-// Sort the patient list by a given column when the user clicks a table header
 function sortTable(column) {
   filteredPatients.sort((a, b) => {
     let aVal = a[column] || '', bVal = b[column] || '';
@@ -127,7 +129,6 @@ function sortTable(column) {
   renderTable();
 }
 
-// Debounce the search so we don't fire a request on every single keystroke
 const debouncedSearch = debounce(async (query) => {
   if (query.length > 0) {
     allPatients = []; filteredPatients = [];
@@ -144,7 +145,6 @@ document.getElementById('search-input').addEventListener('input', (e) => {
   debouncedSearch(val);
 });
 
-// Clear the search box and reload the full patient list
 function clearSearch() {
   const input = document.getElementById('search-input');
   input.value = '';
@@ -153,10 +153,9 @@ function clearSearch() {
   loadPatients();
 }
 
-// Hide the Register Patient button for roles that shouldn't see it
 const registerBtn = document.getElementById('register-btn');
 if (registerBtn && !['admin', 'receptionist'].includes(currentRole)) {
   registerBtn.style.display = 'none';
 }
 
-loadPatients();
+loadPatients('', true);

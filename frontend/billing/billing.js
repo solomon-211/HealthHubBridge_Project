@@ -1,22 +1,17 @@
-// Only admin and receptionist can access the billing page
 authGuard();
 checkRole(['receptionist', 'admin']) || (location.href = '/dashboard/index.html');
 checkSessionTimeout();
 
-// Inject the shared header and sidebar
 document.getElementById('header-slot').outerHTML = renderHeader();
 document.getElementById('sidebar-slot').outerHTML = renderSidebar('billing');
 applyRoleVisibility();
 
-// Keep the full invoice list and supporting data in memory
 let allInvoices = [];
 let allServices = [];
 let allPatients = [];
 
-// If another page set this, we'll pre-select the patient when the create modal opens
 let pendingPrefillPatientId = sessionStorage.getItem('prefillInvoicePatientId');
 
-// Fetch all invoices from the backend
 async function loadInvoices() {
   try {
     const res = await apiFetch('/api/invoices');
@@ -28,7 +23,6 @@ async function loadInvoices() {
   }
 }
 
-// Filter the invoice list by patient name/clinic number and payment status
 function applyFilters() {
   const search = document.getElementById('filter-patient').value.trim().toLowerCase();
   const status = document.getElementById('filter-status').value;
@@ -42,7 +36,6 @@ function applyFilters() {
   renderInvoices(filtered);
 }
 
-// Render the invoices table
 function renderInvoices(invoices) {
   const tbody = document.getElementById('invoices-list');
   if (!invoices.length) {
@@ -66,7 +59,6 @@ function renderInvoices(invoices) {
     </tr>`).join('');
 }
 
-// Open the create invoice modal and load patients + services if not already loaded
 async function openCreateInvoice() {
   document.getElementById('services-tbody-new').innerHTML = '';
   document.getElementById('invoice-total-preview').textContent = '0 SSP';
@@ -74,7 +66,6 @@ async function openCreateInvoice() {
   showModal('create-invoice-modal');
 
   try {
-    // Load patients and services in parallel, reusing cached data if available
     const [pRes, sRes] = await Promise.all([
       allPatients.length ? Promise.resolve({ patients: allPatients }) : apiFetch('/api/patients'),
       allServices.length ? Promise.resolve({ services: allServices }) : apiFetch('/api/services')
@@ -86,7 +77,6 @@ async function openCreateInvoice() {
     sel.innerHTML = '<option value="">Select Patient</option>' +
       allPatients.map(p => `<option value="${p.patient_id}">${p.first_name} ${p.last_name} (${p.clinic_number})</option>`).join('');
 
-    // If we were redirected here from another page with a patient pre-selected, apply it
     if (pendingPrefillPatientId) {
       sel.value = String(pendingPrefillPatientId);
       pendingPrefillPatientId = null;
@@ -98,7 +88,6 @@ async function openCreateInvoice() {
   }
 }
 
-// Add a new service line item row to the create invoice form
 function addServiceRow() {
   const tbody = document.getElementById('services-tbody-new');
   const tr = document.createElement('tr');
@@ -124,7 +113,6 @@ function addServiceRow() {
   tbody.appendChild(tr);
 }
 
-// Auto-fill the unit price when a service is selected from the dropdown
 function onServicePick(select) {
   const opt = select.options[select.selectedIndex];
   const row = select.closest('tr');
@@ -132,7 +120,6 @@ function onServicePick(select) {
   updateInvoiceTotal();
 }
 
-// Recalculate the running total as the user adds or changes line items
 function updateInvoiceTotal() {
   let total = 0;
   document.querySelectorAll('#services-tbody-new tr').forEach(tr => {
@@ -143,7 +130,6 @@ function updateInvoiceTotal() {
   document.getElementById('invoice-total-preview').textContent = formatCurrency(total);
 }
 
-// Submit the new invoice — backend expects patient_id and items with service_id + quantity
 async function submitCreateInvoice() {
   const patientId = document.getElementById('invoice-patient-select').value;
   if (!patientId) { showToast('Please select a patient', 'error'); return; }
@@ -170,7 +156,6 @@ async function submitCreateInvoice() {
   }
 }
 
-// Open the quick payment modal for a specific invoice
 function openPaymentModal(invoiceId) {
   document.getElementById('pay-invoice-id').value = invoiceId;
   document.getElementById('pay-amount').value = '';
@@ -179,7 +164,6 @@ function openPaymentModal(invoiceId) {
   showModal('payment-modal');
 }
 
-// Submit a payment against an invoice
 async function submitPayment() {
   const invoiceId = document.getElementById('pay-invoice-id').value;
   const amount    = parseFloat(document.getElementById('pay-amount').value);
@@ -208,11 +192,9 @@ async function submitPayment() {
   }
 }
 
-// Re-apply filters whenever the user types in the search box or changes the status dropdown
 document.getElementById('filter-patient').addEventListener('input', applyFilters);
 document.getElementById('filter-status').addEventListener('change', applyFilters);
 
 loadInvoices();
 
-// If we arrived here with a patient pre-fill, open the create modal straight away
 if (pendingPrefillPatientId) openCreateInvoice();

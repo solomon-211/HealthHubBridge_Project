@@ -1,6 +1,4 @@
-// make sure the user is logged in before anything else runs
 authGuard();
-// Both admins and doctors can access reports, but doctors only see the clinical tab
 checkRole(['admin', 'doctor']) || (location.href = '/dashboard/index.html');
 checkSessionTimeout();
 
@@ -10,8 +8,6 @@ applyRoleVisibility();
 
 const currentRole = sessionStorage.getItem('role');
 
-// Doctors shouldn't see financial, operational, or patient tabs — hide them
-// and automatically land them on the clinical tab instead
 if (currentRole === 'doctor') {
   ['financial', 'operational', 'patient'].forEach(type => {
     const btn = document.querySelector(`[onclick*="switchReport('${type}'"]`);
@@ -19,7 +15,6 @@ if (currentRole === 'doctor') {
     const panel = document.getElementById(`panel-${type}`);
     if (panel) panel.style.display = 'none';
   });
-  // Simulate clicking the clinical tab so it activates properly
   const clinBtn = document.querySelector(`[onclick*="switchReport('clinical'"]`);
   if (clinBtn) clinBtn.click();
 }
@@ -29,7 +24,6 @@ let reportData    = null;
 let patientReport = null;
 
 function switchReport(type, btn) {
-  // Deactivate all panels and tabs, then activate the one that was clicked
   document.querySelectorAll('.report-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(`panel-${type}`).classList.add('active');
@@ -38,7 +32,6 @@ function switchReport(type, btn) {
 }
 
 async function generateReport(type) {
-  // Patient report is built client-side from /api/patients — no dedicated endpoint
   if (type === 'patient') {
     const from = document.getElementById('pat-from').value;
     const to   = document.getElementById('pat-to').value;
@@ -46,7 +39,6 @@ async function generateReport(type) {
       const res = await apiFetch('/api/patients');
       const patients = res?.patients || [];
 
-      // Normalize any date value to YYYY-MM-DD so comparisons work reliably
       const toYMD = v => {
         if (!v) return '';
         const s = String(v);
@@ -55,7 +47,6 @@ async function generateReport(type) {
         return isNaN(d.getTime()) ? '' : d.toISOString().slice(0,10);
       };
 
-      // If no date range is set, show all patients; otherwise filter by registration date
       const filtered = (!from || !to) ? patients : patients.filter(p => {
         const day = toYMD(p.registered_at);
         return day && day >= from && day <= to;
@@ -80,7 +71,6 @@ async function generateReport(type) {
     return;
   }
 
-  // For financial, clinical, and operational — each tab has its own date inputs
   const fields = { financial: ['fin-from','fin-to'], clinical: ['cli-from','cli-to'], operational: ['op-from','op-to'] };
   const [fromId, toId] = fields[type];
   const from = document.getElementById(fromId).value;
@@ -94,7 +84,6 @@ async function generateReport(type) {
     if (type === 'financial') {
       const byMethod = res?.by_method || [];
       const byStatus = res?.by_status || [];
-      // Outstanding = sum of all invoices that haven't been fully paid
       const outstanding = byStatus.reduce((s, r) => r.payment_status !== 'Paid' ? s + Number(r.total_owed || 0) : s, 0);
       reportData = {
         total_collected: Number(res?.total_collected || 0),
@@ -114,12 +103,13 @@ async function generateReport(type) {
     } else if (type === 'operational') {
       const byStatus = res?.appointments_by_status || [];
       const total = byStatus.reduce((s, r) => s + Number(r.count || 0), 0);
-      const completed = byStatus.find(r => r.status === 'Completed')?.count || 0;
-      const cancelled = byStatus.find(r => r.status === 'Cancelled')?.count || 0;
+      const count = status => Number(byStatus.find(r => r.status === status)?.count || 0);
       reportData = {
         total_appointments: total,
-        completion_rate:    total ? (Number(completed) / total * 100) : 0,
-        cancellation_rate:  total ? (Number(cancelled) / total * 100) : 0,
+        completion_rate:    total ? (count('Completed') / total * 100) : 0,
+        cancellation_rate:  total ? (count('Cancelled') / total * 100) : 0,
+        no_show_rate:       total ? (count('No-show')   / total * 100) : 0,
+        scheduled_rate:     total ? (count('Scheduled') / total * 100) : 0,
         avg_wait_time:      Number(res?.avg_wait_time_minutes || 0),
         details: byStatus.map(r => ({ Status: r.status, Count: r.count }))
       };
@@ -132,7 +122,6 @@ async function generateReport(type) {
 }
 
 function showResults(type) {
-  // Hide the placeholder and reveal the results section
   document.getElementById('results-placeholder').style.display = 'none';
   const content = document.getElementById('results-content');
   content.classList.remove('hidden');
@@ -160,16 +149,16 @@ function renderSummaryCards(type) {
     html += card('Top Diagnosis', reportData.top_diagnosis);
   } else if (type === 'operational') {
     html += card('Total Appointments', reportData.total_appointments);
-    html += card('Completion Rate', reportData.completion_rate.toFixed(1) + '%');
+    html += card('Completion Rate',   reportData.completion_rate.toFixed(1)  + '%');
     html += card('Cancellation Rate', reportData.cancellation_rate.toFixed(1) + '%');
-    html += card('Avg Wait Time', reportData.avg_wait_time + ' min');
+    html += card('No-show Rate',      reportData.no_show_rate.toFixed(1)      + '%');
+    html += card('Scheduled Rate',    reportData.scheduled_rate.toFixed(1)    + '%');
   }
 
   html += '</div>';
   el.innerHTML = html;
 }
 
-// Small helper to build a single summary card element
 function card(label, value) {
   return `<div class="summary-card"><div class="summary-label">${label}</div><div class="summary-value">${value}</div></div>`;
 }
@@ -192,7 +181,6 @@ function renderChart(type) {
           </div>
         </div>
       </div>`;
-    // Small delay so the canvas is in the DOM before we try to draw on it
     setTimeout(() => drawPie('gender-chart', [d.gender.M, d.gender.F, d.gender.O], ['#2563EB','#EC4899','#8B5CF6']), 50);
 
   } else if (type === 'clinical') {
@@ -220,13 +208,59 @@ function renderChart(type) {
       }).join('');
     }, 50);
 
+  } else if (type === 'financial') {
+    const byMethod = (reportData.details || []).filter(r => r.Category === 'Payment Method');
+    const colors   = ['#2563EB','#10B981','#F59E0B','#8B5CF6','#EF4444','#0EA5E9'];
+    const total    = byMethod.reduce((s, r) => s + Number(r.Total || 0), 0) || 1;
+    el.innerHTML = `
+      <div class="chart-container">
+        <div class="chart-title">Revenue by Payment Method</div>
+        <div style="display:flex;gap:20px;align-items:center;margin-top:12px;">
+          <canvas id="fin-chart" width="180" height="180"></canvas>
+          <div id="fin-legend" style="flex:1;"></div>
+        </div>
+      </div>`;
+    setTimeout(() => {
+      drawPie('fin-chart', byMethod.map(r => Number(r.Total)), colors);
+      document.getElementById('fin-legend').innerHTML = byMethod.map((r, i) => {
+        const pct = Math.round(Number(r.Total) / total * 100);
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:12px;height:12px;border-radius:2px;background:${colors[i]};"></div>
+          <span style="font-size:12px;">${r.Label}</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">${formatCurrency(r.Total)} (${pct}%)</span>
+        </div>`;
+      }).join('');
+    }, 50);
+
+  } else if (type === 'operational') {
+    const byStatus = reportData.details || [];
+    const colors   = ['#10B981','#EF4444','#64748B','#2563EB'];
+    const total    = byStatus.reduce((s, r) => s + Number(r.Count || 0), 0) || 1;
+    el.innerHTML = `
+      <div class="chart-container">
+        <div class="chart-title">Appointments by Status</div>
+        <div style="display:flex;gap:20px;align-items:center;margin-top:12px;">
+          <canvas id="op-chart" width="180" height="180"></canvas>
+          <div id="op-legend" style="flex:1;"></div>
+        </div>
+      </div>`;
+    setTimeout(() => {
+      drawPie('op-chart', byStatus.map(r => Number(r.Count)), colors);
+      document.getElementById('op-legend').innerHTML = byStatus.map((r, i) => {
+        const pct = Math.round(Number(r.Count) / total * 100);
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:12px;height:12px;border-radius:2px;background:${colors[i]};"></div>
+          <span style="font-size:12px;">${r.Status}</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">${r.Count} (${pct}%)</span>
+        </div>`;
+      }).join('');
+    }, 50);
+
   } else {
-    // Financial and operational reports don't have a chart — clear the area
     el.innerHTML = '';
   }
 }
 
-// Builds one legend row for the gender pie chart
 function genderLegend(color, label, count, total) {
   return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
     <div style="width:14px;height:14px;border-radius:2px;background:${color};"></div>
@@ -234,7 +268,6 @@ function genderLegend(color, label, count, total) {
   </div>`;
 }
 
-// Draws a simple pie chart on a canvas element using the provided values and colors
 function drawPie(canvasId, values, colors) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -264,7 +297,6 @@ function renderDetailTable(type) {
     return;
   }
 
-  // Patient report gets a custom table layout with specific columns
   if (type === 'patient') {
     el.innerHTML = `
       <table class="results-table">
@@ -283,14 +315,12 @@ function renderDetailTable(type) {
     return;
   }
 
-  // For all other report types, dynamically build the table from whatever keys the data has
   const headers = Object.keys(data[0]);
   el.innerHTML = `
     <table class="results-table">
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
       <tbody>${data.map(row => `<tr>${headers.map(h => {
         let v = row[h];
-        // Format any column with "total" in the name as currency
         if (typeof v === 'number' && String(h).toLowerCase().includes('total')) v = formatCurrency(v);
         return `<td>${v ?? '—'}</td>`;
       }).join('')}</tr>`).join('')}</tbody>

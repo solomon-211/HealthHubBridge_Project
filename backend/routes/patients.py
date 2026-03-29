@@ -10,23 +10,19 @@ from mysql.connector import IntegrityError
 patients_bp = Blueprint('patients', __name__)
 
 def serialize(row):
-    #Convert any date/datetime values in a dict to ISO strings for JSON serialization.
     if row is None:
         return None
     return {k: (v.isoformat() if hasattr(v, 'isoformat') else v) for k, v in row.items()}
 
 
-# route to get all patients, with optional search by name or clinic number
 @patients_bp.route('/patients', methods=['GET'])
 @login_required
 def get_patients():
     search = request.args.get('search', '').strip()
 
-    # Build a cache key that includes the search term so different searches  are cached independently.
     cache_key = f'patients:{search}'
     cached = cache_get(cache_key)
     if cached:
-        # Serve from cache — no DB call needed
         return jsonify({'patients': cached, 'source': 'cache'}), 200
 
     try:
@@ -59,12 +55,10 @@ def get_patients():
     except Exception as e:
         return jsonify({'error': 'Could not retrieve patients. Check connection.', 'details': str(e)}), 503
 
-    # Store in cache for 30 s
     cache_set(cache_key, patients)
     return jsonify({'patients': patients, 'source': 'db'}), 200
 
 
-# route to register a new patient
 @patients_bp.route('/patients', methods=['POST'])
 @login_required
 def register_patient():
@@ -72,7 +66,6 @@ def register_patient():
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
-    # Validate required fields before touching the database
     required = ['first_name', 'last_name', 'date_of_birth', 'gender', 'clinic_number']
     missing  = [f for f in required if not data.get(f)]
     if missing:
@@ -100,21 +93,18 @@ def register_patient():
         new_id = cursor.lastrowid
         conn.close()
 
-    # Handle duplicate clinic number error gracefully with a clear message
     except IntegrityError as e:
         if e.errno == 1062:
             return jsonify({'error': f"Clinic number '{data['clinic_number']}' is already registered"}), 409
-        raise  # re-raise anything else
+        raise
     except Exception as e:
         return jsonify({'error': 'Registration failed.', 'details': str(e)}), 503
-    
-    # Invalidate the patients list cache so the new patient appears
+
     cache_invalidate('patients')
 
     return jsonify({'id': new_id, 'clinic_number': data['clinic_number']}), 201
 
 
-# route to get a single patient by ID
 @patients_bp.route('/patients/<int:patient_id>', methods=['GET'])
 @login_required
 def get_patient(patient_id):
@@ -139,7 +129,6 @@ def get_patient(patient_id):
     return jsonify({'patient': patient, 'source': 'db'}), 200
 
 
-# route to update patient info (only certain fields allowed for update)
 @patients_bp.route('/patients/<int:patient_id>', methods=['PATCH'])
 @login_required
 def update_patient(patient_id):
@@ -147,7 +136,6 @@ def update_patient(patient_id):
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
-    # Only allow safe, updatable fields — never let the caller overwrite patient_id
     allowed_fields = ['phone', 'email', 'address', 'emergency_contact',
                       'insurance_provider', 'blood_type']
     updates = {k: v for k, v in data.items() if k in allowed_fields}
@@ -155,7 +143,6 @@ def update_patient(patient_id):
     if not updates:
         return jsonify({'error': 'No valid fields provided to update'}), 400
 
-    # Dynamically build the SET clause from whichever fields were sent
     set_clause = ', '.join(f"{col} = %s" for col in updates)
     values     = list(updates.values()) + [patient_id]
 
@@ -175,7 +162,6 @@ def update_patient(patient_id):
     if affected == 0:
         return jsonify({'error': 'Patient not found'}), 404
 
-    # Clear cache for this patient so next GET returns fresh data
     cache_invalidate(f'patients:id:{patient_id}')
     cache_invalidate('patients:')
 

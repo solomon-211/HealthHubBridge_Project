@@ -1,39 +1,18 @@
-/**
- * HealthHub Bridge — Shared Utility Functions
- * Used across all pages. Connects to Flask backend at localhost:5000.
- */
-
 const API_BASE_URL =
   window.location.protocol.startsWith('http') && window.location.hostname
     ? `${window.location.protocol}//${window.location.hostname}:5000`
     : 'http://localhost:5000';
 
-
-// ─── Authentication ───────────────────────────────────────────────────────────
-
-/**
- * Redirect unauthenticated users to the login page.
- * Called at the top of every protected page.
- */
 function authGuard() {
   if (!sessionStorage.getItem('role')) {
     window.location.href = '/auth/login.html';
   }
 }
 
-/**
- * Check whether the current user has one of the given roles.
- * @param {string[]} allowedRoles
- * @returns {boolean}
- */
 function checkRole(allowedRoles) {
   return allowedRoles.includes(sessionStorage.getItem('role'));
 }
 
-/**
- * Hide elements whose data-role attribute does not include the current user's role.
- * Usage: <div data-role="admin,doctor">...</div>
- */
 function applyRoleVisibility() {
   const currentRole = sessionStorage.getItem('role');
   document.querySelectorAll('[data-role]').forEach(element => {
@@ -42,10 +21,6 @@ function applyRoleVisibility() {
   });
 }
 
-/**
- * Check whether the session has exceeded one hour.
- * Shows a warning toast and logs the user out if expired.
- */
 function checkSessionTimeout() {
   const loginTime = sessionStorage.getItem('login_time');
   if (!loginTime) return;
@@ -57,27 +32,12 @@ function checkSessionTimeout() {
   }
 }
 
-/**
- * Log the user out by clearing the session and redirecting to login.
- */
 function logout() {
   fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
   sessionStorage.clear();
   window.location.href = '/auth/login.html';
 }
 
-
-// ─── API Communication ────────────────────────────────────────────────────────
-
-/**
- * Send an authenticated request to the backend API.
- * Shows the global spinner while the request is in flight.
- * Automatically logs out on 401 responses.
- *
- * @param {string} endpoint - Path relative to the API base (e.g. '/api/patients')
- * @param {object} options  - Standard fetch options (method, body, headers, etc.)
- * @returns {Promise<object|null>} Parsed JSON response, or null on 401
- */
 async function apiFetch(endpoint, options = {}) {
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
@@ -102,7 +62,6 @@ async function apiFetch(endpoint, options = {}) {
       return null;
     }
 
-    // Parse defensively: some failures may return empty or non-JSON payloads.
     const rawText = await response.text();
     const contentType = (response.headers.get('content-type') || '').toLowerCase();
     const looksLikeJson = contentType.includes('application/json') || rawText.trim().startsWith('{') || rawText.trim().startsWith('[');
@@ -118,7 +77,6 @@ async function apiFetch(endpoint, options = {}) {
           }
         }
       } else if (!response.ok) {
-        // For error cases, surface plain text from the server when available.
         data = { error: rawText.trim() };
       }
     }
@@ -144,14 +102,6 @@ async function apiFetch(endpoint, options = {}) {
   }
 }
 
-
-// ─── UI Feedback ──────────────────────────────────────────────────────────────
-
-/**
- * Display a temporary toast notification at the bottom of the screen.
- * @param {string} message
- * @param {'success'|'error'|'warning'} type
- */
 function showToast(message, type = 'success') {
   let container = document.getElementById('toast-container');
 
@@ -170,47 +120,26 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.remove(), 3000);
 }
 
-/**
- * Show the loading spinner overlay.
- * @param {string} spinnerId - ID of the spinner element
- */
 function showSpinner(spinnerId) {
   const element = document.getElementById(spinnerId);
   if (element) element.style.display = 'flex';
 }
 
-/**
- * Hide the loading spinner overlay.
- * @param {string} spinnerId - ID of the spinner element
- */
 function hideSpinner(spinnerId) {
   const element = document.getElementById(spinnerId);
   if (element) element.style.display = 'none';
 }
 
-/**
- * Open a modal overlay by ID.
- * @param {string} modalId
- */
 function showModal(modalId) {
   const el = document.getElementById(modalId);
   if (el) el.classList.add('open');
 }
 
-/**
- * Close a modal overlay by ID.
- * @param {string} modalId
- */
 function hideModal(modalId) {
   const el = document.getElementById(modalId);
   if (el) el.classList.remove('open');
 }
 
-/**
- * Toggle a button's loading state.
- * @param {HTMLButtonElement} btn
- * @param {boolean} isLoading
- */
 function loadingState(btn, isLoading) {
   if (!btn) return;
   btn.disabled = isLoading;
@@ -222,24 +151,14 @@ function loadingState(btn, isLoading) {
   }
 }
 
-/** @param {string} phone @returns {boolean} */
 function validatePhone(phone) {
   return String(phone).trim().length >= 7;
 }
 
-/** @param {string} email @returns {boolean} */
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-
-// ─── Data Formatting ──────────────────────────────────────────────────────────
-
-/**
- * Format an ISO date string into a human-readable date.
- * @param {string} dateString
- * @returns {string} e.g. "12 Apr 1990"
- */
 function formatDate(dateString) {
   if (!dateString) return '—';
   const d = new Date(dateString);
@@ -251,11 +170,6 @@ function formatDate(dateString) {
   });
 }
 
-/**
- * Extract HH:MM time from any date string the backend may return.
- * @param {string} dateString
- * @returns {string} e.g. "09:00"
- */
 function formatTime(dateString) {
   if (!dateString) return '';
   const d = new Date(dateString);
@@ -263,11 +177,6 @@ function formatTime(dateString) {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-/**
- * Format a number as South Sudanese Pound currency.
- * @param {number} amount
- * @returns {string} e.g. "12,000 SSP"
- */
 function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '0 SSP';
   const num = Number(amount);
@@ -275,11 +184,6 @@ function formatCurrency(amount) {
   return num.toLocaleString('en-US') + ' SSP';
 }
 
-/**
- * Calculate a person's age from their date of birth.
- * @param {string} dateOfBirth - ISO date string
- * @returns {number} Age in years
- */
 function calculateAge(dateOfBirth) {
   const today = new Date();
   const birth = new Date(dateOfBirth);
@@ -291,14 +195,6 @@ function calculateAge(dateOfBirth) {
   return age;
 }
 
-
-// ─── Status Badges ────────────────────────────────────────────────────────────
-
-/**
- * Return the CSS class name for a given status value.
- * @param {string} status
- * @returns {string}
- */
 function getStatusBadgeClass(status) {
   const statusClassMap = {
     'Scheduled': 'badge-scheduled',
@@ -314,36 +210,15 @@ function getStatusBadgeClass(status) {
   return statusClassMap[status] || 'badge-cancelled';
 }
 
-/**
- * Return an HTML badge element for a given status.
- * @param {string} status
- * @returns {string} HTML string
- */
 function renderBadge(status) {
   return `<span class="badge ${getStatusBadgeClass(status)}">${status}</span>`;
 }
 
-/**
- * Determine whether a prescription is currently active or expired.
- * @param {string} endTime - ISO datetime string
- * @returns {'Active'|'Expired'}
- */
 function getPrescriptionStatus(endTime) {
   if (!endTime) return 'Active';
   return new Date(endTime) > new Date() ? 'Active' : 'Expired';
 }
 
-
-// ─── Utility Helpers ──────────────────────────────────────────────────────────
-
-/**
- * Return a debounced version of a function.
- * Useful for search inputs to avoid firing on every keystroke.
- *
- * @param {Function} func  - Function to debounce
- * @param {number}   delay - Milliseconds to wait (default 300)
- * @returns {Function}
- */
 function debounce(func, delay = 300) {
   let timer;
   return (...args) => {
@@ -352,14 +227,6 @@ function debounce(func, delay = 300) {
   };
 }
 
-/**
- * Slice an array into a single page of results.
- *
- * @param {any[]}  data    - Full dataset
- * @param {number} page    - Current page number (1-based)
- * @param {number} perPage - Items per page
- * @returns {{ items, totalPages, currentPage, total, start, end }}
- */
 function paginate(data, page, perPage = 10) {
   const total = data.length;
   const totalPages = Math.ceil(total / perPage);
@@ -374,14 +241,6 @@ function paginate(data, page, perPage = 10) {
   };
 }
 
-/**
- * Render Previous / numbered / Next pagination buttons into a container.
- *
- * @param {string}   containerId  - ID of the container element
- * @param {number}   totalPages
- * @param {number}   currentPage
- * @param {Function} onPageChange - Called with the new page number when a button is clicked
- */
 function renderPagination(containerId, totalPages, currentPage, onPageChange) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -396,16 +255,6 @@ function renderPagination(containerId, totalPages, currentPage, onPageChange) {
   container.innerHTML = html;
 }
 
-
-// ─── Layout Components ────────────────────────────────────────────────────────
-
-/**
- * Build the sidebar navigation HTML.
- * Links are shown or hidden based on the user's role via data-role attributes.
- *
- * @param {string} activePage - Identifier of the currently active page
- * @returns {string} HTML string
- */
 function renderSidebar(activePage) {
   const isActive = (page) => activePage === page ? 'active' : '';
   return `
@@ -436,10 +285,6 @@ function renderSidebar(activePage) {
   </nav>`;
 }
 
-/**
- * Build the top header HTML with the username, role badge, and logout button.
- * @returns {string} HTML string
- */
 function renderHeader() {
   const username = sessionStorage.getItem('name') || '';
   const role = sessionStorage.getItem('role') || '';

@@ -2,7 +2,6 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from config import Config
 
-# Import all route blueprints
 from routes.auth import auth_bp
 from routes.patients import patients_bp
 from routes.doctors import doctors_bp
@@ -14,13 +13,11 @@ from routes.reports import reports_bp
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Allow frontend (HTML/JS) to call the API from a different port or origin
-CORS(app, 
+CORS(app,
      supports_credentials=True,
      origins=["http://127.0.0.1:5500", "http://localhost:5500"]
 )
 
-# Register all blueprints with the /api prefix
 app.register_blueprint(auth_bp,          url_prefix='/api/auth')
 app.register_blueprint(patients_bp,      url_prefix='/api')
 app.register_blueprint(doctors_bp,       url_prefix='/api')
@@ -29,9 +26,6 @@ app.register_blueprint(medical_visits_bp,url_prefix='/api')
 app.register_blueprint(billing_bp,       url_prefix='/api')
 app.register_blueprint(reports_bp,       url_prefix='/api')
 
-
-# Global error handlers
-# These catch unhandled errors so the API always returns clean JSON, even if something unexpected happens.
 
 @app.errorhandler(404)
 def not_found(e):
@@ -47,5 +41,4 @@ def server_error(e):
 
 
 if __name__ == '__main__':
-    # debug=True gives helpful error tracebacks during development
     app.run(debug=True, port=5000)
