@@ -1,12 +1,12 @@
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(_file_)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Blueprint, request, jsonify
 from config import get_db_connection
 from cache import cache_get, cache_set, cache_invalidate
 from routes.auth import login_required
 from mysql.connector import IntegrityError
 
-patients_bp = Blueprint('patients', _name_)
+patients_bp = Blueprint('patients', __name__)
 
 def serialize(row):
     #Convert any date/datetime values in a dict to ISO strings for JSON serialization.
